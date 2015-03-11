@@ -1,0 +1,16 @@
+body {
+	margin: 0px;
+	padding: 3em;
+	text-align: center;
+	font-size: 10pt;
+	color: #EEEEEE;
+	background-color: #1E1E1E;
+}
+
+canvas {
+	outline: 0;
+	border: 0;
+	margin-left: auto;
+	margin-right: auto;
+	cursor: crosshair;
+}
