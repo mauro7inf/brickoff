@@ -35,10 +35,12 @@ var gameCanvas;
 var gameCtx;
 var audioCtx = new AudioContext();
 var audioPlayer;
+var soundBank;
 var titleScreen;
 var levelScreen;
 var endingScreen;
 var player;
+var collisions;
 
 var globalOptions = {
 	mspf: 1000.0/180.0, // ms per frame, opposite of fps
@@ -225,9 +227,9 @@ player = {
 }
 
 player.initPlayer = function () {
-	this.lives = 5;
+	this.lives = 0;
 	this.score = 0; // not sure if we want to implement score...
-	this.powerups = {};
+	this.powerups = {}; // none of these yet
 }
 
 player.die = function () {
@@ -446,8 +448,7 @@ titleScreen.mouseUp = function (x, y) {
 
 titleScreen.endTitle = function () {
 	gameState.title = false;
-	player.initPlayer();
-	levelScreen.initLevel(1);
+	levelScreen.initGame();
 };
 
 function diagnoseTitle() {
@@ -463,14 +464,14 @@ function diagnoseTitle() {
 	}
 }
 
-/***********************************************\
-██╗     ███████╗██╗   ██╗███████╗██╗     ███████╗
-██║     ██╔════╝██║   ██║██╔════╝██║     ██╔════╝
-██║     █████╗  ██║   ██║█████╗  ██║     ███████╗
-██║     ██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║     ╚════██║
-███████╗███████╗ ╚████╔╝ ███████╗███████╗███████║
-╚══════╝╚══════╝  ╚═══╝  ╚══════╝╚══════╝╚══════╝
-\***********************************************/
+/*********************************************************************************************\
+██╗     ███████╗██╗   ██╗███████╗██╗         ███████╗ ██████╗██████╗ ███████╗███████╗███╗   ██╗
+██║     ██╔════╝██║   ██║██╔════╝██║         ██╔════╝██╔════╝██╔══██╗██╔════╝██╔════╝████╗  ██║
+██║     █████╗  ██║   ██║█████╗  ██║         ███████╗██║     ██████╔╝█████╗  █████╗  ██╔██╗ ██║
+██║     ██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║         ╚════██║██║     ██╔══██╗██╔══╝  ██╔══╝  ██║╚██╗██║
+███████╗███████╗ ╚████╔╝ ███████╗███████╗    ███████║╚██████╗██║  ██║███████╗███████╗██║ ╚████║
+╚══════╝╚══════╝  ╚═══╝  ╚══════╝╚══════╝    ╚══════╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚══════╝╚═╝  ╚═══╝
+\*********************************************************************************************/
 
 levelScreen = {
 	// basics
@@ -494,32 +495,35 @@ levelScreen = {
 	mouseDown: false,
 	retrieveLostBallNext: false,
 
-	// level geometry
+	// level geometry -- it's set by each level anyway
 	tb: 50, // top buffer between end of canvas and wall
 	bb: 50, // bottom buffer
 	lb: 50, // left buffer
 	rb: 50, // right buffer
 	cornerRadius: 100, // corner radius
 	goalWidth: 250, // width of goal area along bottom wall
-	goalRadius: undefined, // radius of goal's rounded edges; will be calculated
+	goalRadius: 45, // radius of goal's rounded edges;
+	extraRadius: 5, // if the goal radius is too big, this smoothes out the hidden goal corner
 	edgeWidth: 5, // width of edge around game canvas
 
 	// level data
 	levelData: {
 		1: {
-			title: 'Simple Bricks',
+			title: 'In C',
+			newLives: 5,
 			geometry: {
 				cornerRadius: 100,
 				tb: 50,
 				bb: 50,
 				lb: 50,
 				rb: 50,
-				goalWidth: 250
+				goalWidth: 250,
+				goalRadius: 45
 			},
-			initWalls: 'initWallsA',
+			initWalls: 'initWallsRounded',
 			initBricks: 'initBricks1',
 			initPaddleAndBall: 'initPaddleAndBallA',
-			drawGameWall: 'drawGameWallA',
+			drawGameWall: 'drawGameWallRounded',
 			gradients: 'gradientsA',
 			outlineFill: {
 				r: 30,
@@ -534,19 +538,49 @@ levelScreen = {
 		},
 		2: {
 			title: 'Many Colors',
+			newLives: 1,
 			geometry: {
-				cornerRadius: 5,
+				cornerRadius: 25,
 				tb: 50,
 				bb: 50,
 				lb: 50,
 				rb: 50,
-				goalWidth: 300
+				goalWidth: 250,
+				goalRadius: 25
 			},
-			initWalls: 'initWallsA',
+			initWalls: 'initWallsRounded',
 			initBricks: 'initBricks2',
 			initPaddleAndBall: 'initPaddleAndBallA',
-			drawGameWall: 'drawGameWallA',
+			drawGameWall: 'drawGameWallRounded',
 			gradients: 'gradientsB',
+			outlineFill: {
+				r: 30,
+				g: 15,
+				b: 0
+			},
+			outlineStroke: {
+				r: 255,
+				g: 160,
+				b: 64
+			}
+		},
+		3: {
+			title: 'Squares',
+			newLives: 1,
+			geometry: {
+				cornerRadius: 100,
+				tb: 50,
+				bb: 50,
+				lb: 50,
+				rb: 50,
+				goalWidth: 250,
+				goalRadius: 0
+			},
+			initWalls: 'initWallsB',
+			initBricks: 'initBricks3',
+			initPaddleAndBall: 'initPaddleAndBallA',
+			drawGameWall: 'drawGameWallB',
+			gradients: 'gradientsC',
 			outlineFill: {
 				r: 30,
 				g: 30,
@@ -560,6 +594,11 @@ levelScreen = {
 		}
 	}
 };
+
+levelScreen.initGame = function () {
+	player.initPlayer();
+	this.initLevel(1);
+}
 
 levelScreen.initLevel = function (n) {
 	//console.log('init level ' + n);
@@ -589,63 +628,87 @@ levelScreen.initLevel = function (n) {
 	this.lb = geometry.lb;
 	this.rb = geometry.rb;
 	this.goalWidth = geometry.goalWidth;
+	this.goalRadius = geometry.goalRadius;
 
 	// make walls
 	this[this.levelData[this.level]['initWalls']]();
+
+	// edit player lives
+	player.lives += this.levelData[this.level]['newLives'];
 };
 
-levelScreen.initWallsA = function () {
-	// build up walls
-	/*this.cornerRadius = 100;
-	this.tb = 50;
-	this.bb = 50;
-	this.lb = 50;
-	this.rb = 50;
-	this.goalWidth = 250;*/
-	this.goalRadius = this.bb - this.edgeWidth
-	var goalLeft = (gameCanvas.width + this.lb - this.rb - this.goalWidth)*0.5;
-	var goalRight = (gameCanvas.width + this.lb - this.rb + this.goalWidth)*0.5;
+levelScreen.levelStart = function () {
+	this[this.levelData[this.level]['initPaddleAndBall']]();
+	this[this.levelData[this.level]['initBricks']]();
+};
 
-	// create wall objects for collisions
-	// left wall
-	var wallL = new Wall(this.lb, this.tb, this.lb, gameCanvas.height - this.bb);
-	// right wall
-	var wallR = new Wall(gameCanvas.width - this.rb, this.tb, gameCanvas.width - this.rb, gameCanvas.height - this.bb);
-	// top wall
-	var wallT = new Wall(this.lb, this.tb, gameCanvas.width - this.rb, this.tb);
-	// bottom wall left of the goal
-	var wallLB = new Wall(this.lb, gameCanvas.height - this.bb, goalLeft, gameCanvas.height - this.bb);
-	// bottom wall right of the goal
-	var wallRB = new Wall(goalRight, gameCanvas.height - this.bb, gameCanvas.width - this.rb, gameCanvas.height - this.bb);
-	// goal line (ball can pass, paddle cannot)
-	var wallG = new Wall(goalLeft, gameCanvas.height - this.bb, goalRight, gameCanvas.height - this.bb);
-	wallG.passable = {CueBall: true};
-	// middle line (ball can pass, paddle cannot)
-	var wallS = new Wall(this.lb, 0.5*(gameCanvas.height + this.tb - this.bb),
-		gameCanvas.width - this.rb, 0.5*(gameCanvas.height + this.tb - this.bb));
-	wallS.passable = {CueBall: true};
-	// top left corner
-	var wallTL = new ArcWall(this.lb + this.cornerRadius, this.tb + this.cornerRadius, this.cornerRadius,
-		1.5*Math.PI, Math.PI, true);
-	// top right corner
-	var wallTR = new ArcWall(gameCanvas.width - this.rb - this.cornerRadius, this.tb + this.cornerRadius, this.cornerRadius,
-		0, 1.5*Math.PI, true);
-	// bottom right corner
-	var wallBR = new ArcWall(gameCanvas.width - this.rb - this.cornerRadius, gameCanvas.height - this.bb - this.cornerRadius,
-		this.cornerRadius, 0.5*Math.PI, 0, true);
-	// bottom left corner
-	var wallBL = new ArcWall(this.lb + this.cornerRadius, gameCanvas.height - this.bb - this.cornerRadius, this.cornerRadius,
-		Math.PI, 0.5*Math.PI, true);
-	// left corner of goal
-	var wallGL = new ArcWall(goalLeft, gameCanvas.height - this.edgeWidth, this.goalRadius, 0, 1.5*Math.PI, true);
-	// right corner of goal
-	var wallGR = new ArcWall(goalRight, gameCanvas.height - this.edgeWidth, this.goalRadius, 1.5*Math.PI, Math.PI, true);
-	// left and right sides of goal corridor -- out of view but necessary to prevent glitches
-	var wallHL = new Wall(goalLeft + this.goalRadius, gameCanvas.height - this.edgeWidth, goalLeft + this.goalRadius, gameCanvas.height + 500);
-	var wallHR = new Wall(goalRight - this.goalRadius, gameCanvas.height - this.edgeWidth, goalRight - this.goalRadius, gameCanvas.height + 500);
-	// add walls to list for collisions
-	this.walls = [wallL, wallR, wallT, wallLB, wallRB, wallS, wallG, wallTL, wallTR, wallBR, wallBL, wallGL, wallGR, wallHL, wallHR];
-}
+levelScreen.nextLevel = function () {
+	if (this.level >= 2) { // max level; put this variable elsewhere
+		gameState.level = false;
+		endingScreen.gameWon();
+	} else {
+		levelScreen.initLevel(this.level + 1);
+	}
+};
+
+levelScreen.gameOver = function () {
+	gameState.level = false;
+	endingScreen.gameOver();
+};
+
+levelScreen.mouseMove = function (x, y) {
+	if (this.paddle) this.paddle.move(x,y);
+};
+
+levelScreen.mouseUp = function (x, y) {
+	this.retrieveLostBallNext = true;
+};
+
+levelScreen.capture = function () {
+	for (var b = 0; b < this.balls.length; b++) {
+		this.paddle.capture(this.balls[b]);
+	}
+};
+
+levelScreen.reviseCapture = function () {
+	this.paddle.capturing = false;
+	for (var b = 0; b < this.balls.length; b++) {
+		this.paddle.reviseCapture(this.balls[b]);
+	}
+};
+
+levelScreen.retrieveLostBall = function () {
+	var lostBall = false;
+	for (var b = 0; b < this.balls.length; b++) {
+		if (this.balls[b].expired) lostBall = true;
+	}
+	if (!lostBall) return;
+	var minTouch = this.balls[0].lastTouched + 1;
+	var minBall = -1;
+	for (var b = 0; b < this.balls.length; b++) {
+		if (this.balls[b].lastTouched < minTouch) {
+			minTouch = this.balls[b].lastTouched;
+			minBall = b;
+		}
+	}
+	this.paddle.capturing = true;
+	this.balls[minBall].captured = this.paddle;
+	this.balls[minBall].x = this.paddle.x + (4*Math.random() - 2); // don't center it to prevent concentric collisions
+	this.balls[minBall].y = this.paddle.y + (4*Math.random() - 2);
+	this.balls[minBall].lastPosition.x = this.balls[minBall].x;
+	this.balls[minBall].lastPosition.y = this.balls[minBall].y;
+	this.balls[minBall].vx = 0;
+	this.balls[minBall].vy = 0;
+};
+
+/*********************************************************************************************\
+██╗     ███████╗██╗   ██╗███████╗██╗         ██╗   ██╗██████╗ ██████╗  █████╗ ████████╗███████╗
+██║     ██╔════╝██║   ██║██╔════╝██║         ██║   ██║██╔══██╗██╔══██╗██╔══██╗╚══██╔══╝██╔════╝
+██║     █████╗  ██║   ██║█████╗  ██║         ██║   ██║██████╔╝██║  ██║███████║   ██║   █████╗  
+██║     ██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║         ██║   ██║██╔═══╝ ██║  ██║██╔══██║   ██║   ██╔══╝  
+███████╗███████╗ ╚████╔╝ ███████╗███████╗    ╚██████╔╝██║     ██████╔╝██║  ██║   ██║   ███████╗
+╚══════╝╚══════╝  ╚═══╝  ╚══════╝╚══════╝     ╚═════╝ ╚═╝     ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝
+\*********************************************************************************************/
 
 levelScreen.update = function () {
 	if (this.paddle) {
@@ -729,10 +792,7 @@ levelScreen.update = function () {
 		// check whether all balls have been lost
 		if (!this.levelWon && this.balls.length == 0) {
 			this.death = true;
-			var sound = new Tone(2*C1, 150, 0.3);
-			sound.envelope.attack = 20;
-			sound.envelope.attackGain = 1.2;
-			sound.play();
+			soundBank.death();
 			if (player.lives > 0) {
 				this.deathFader = new Fader(0.5, 0.1, 0.5);
 			} else {
@@ -767,7 +827,6 @@ levelScreen.update = function () {
 		if (this.titleFader && this.titleFader.mode == 'done' && this.levelFader && this.levelFader.fadeMode == 'fadeOut') {
 			this.titleFader = undefined;
 			this.levelFader.pause();
-			//this.levelStart();
 		}
 		if (this.levelFader && this.levelFader.mode == 'done') {
 			this.levelFader = undefined;
@@ -778,6 +837,15 @@ levelScreen.update = function () {
 		}
 	}
 };
+
+/*****************************************************************************\
+██╗     ███████╗██╗   ██╗███████╗██╗         ██████╗ ██████╗  █████╗ ██╗    ██╗
+██║     ██╔════╝██║   ██║██╔════╝██║         ██╔══██╗██╔══██╗██╔══██╗██║    ██║
+██║     █████╗  ██║   ██║█████╗  ██║         ██║  ██║██████╔╝███████║██║ █╗ ██║
+██║     ██╔══╝  ╚██╗ ██╔╝██╔══╝  ██║         ██║  ██║██╔══██╗██╔══██║██║███╗██║
+███████╗███████╗ ╚████╔╝ ███████╗███████╗    ██████╔╝██║  ██║██║  ██║╚███╔███╔╝
+╚══════╝╚══════╝  ╚═══╝  ╚══════╝╚══════╝    ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝ 
+\*****************************************************************************/
 
 levelScreen.draw = function () {
 	//console.log('draw level');
@@ -851,6 +919,45 @@ levelScreen.drawGameWall = function (f) {
 	this[this.levelData[this.level]['drawGameWall']](gradients.stroke, gradients.fill);
 }
 
+levelScreen.drawStatus = function (f) {
+	if (f === undefined) f = 1;
+	// top of screen, at least for now
+	gameCtx.fillStyle = 'rgba(237, 237, 237, ' + f + ')';
+	gameCtx.font = '36px serif';
+	if (player.lives >= 0) {
+		var livesWidth = gameCtx.measureText(player.lives).width;
+		var livesHeight = 26; // there's no height metric
+		gameCtx.fillText(player.lives, gameCanvas.width - this.edgeWidth - livesWidth - 8, this.edgeWidth + livesHeight + 8);
+	}
+	// X
+	gameCtx.strokeStyle = rgba(237, 237, 237, f);
+	gameCtx.lineWidth = 2;
+	gameCtx.beginPath();
+	gameCtx.moveTo(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16, this.edgeWidth + livesHeight + 8);
+	gameCtx.lineTo(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16 - livesHeight, this.edgeWidth + 8);
+	gameCtx.moveTo(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16, this.edgeWidth + 8);
+	gameCtx.lineTo(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16 - livesHeight, this.edgeWidth + livesHeight + 8);
+	gameCtx.stroke();
+	// ball icon
+	var ballRadius = 15;
+	gameCtx.fillStyle = rgba(255, 255, 255, f);
+	gameCtx.strokeStyle = rgba(141, 128, 180, f);
+	gameCtx.lineWidth = 2;
+	gameCtx.beginPath();
+	gameCtx.arc(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16 - livesHeight - 16 - ballRadius, this.edgeWidth + (livesHeight/2.0) + 8, ballRadius, 0, 2*Math.PI, true);
+	gameCtx.fill();
+	gameCtx.stroke();
+}
+
+/*********************************************************************\
+ ██████╗ ██████╗  █████╗ ██████╗ ██╗███████╗███╗   ██╗████████╗███████╗
+██╔════╝ ██╔══██╗██╔══██╗██╔══██╗██║██╔════╝████╗  ██║╚══██╔══╝██╔════╝
+██║  ███╗██████╔╝███████║██║  ██║██║█████╗  ██╔██╗ ██║   ██║   ███████╗
+██║   ██║██╔══██╗██╔══██║██║  ██║██║██╔══╝  ██║╚██╗██║   ██║   ╚════██║
+╚██████╔╝██║  ██║██║  ██║██████╔╝██║███████╗██║ ╚████║   ██║   ███████║
+ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝ ╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚══════╝
+\*********************************************************************/
+
 levelScreen.gradientsA = function (f) {
 	gameCtx.lineWidth = 2;
 
@@ -905,7 +1012,17 @@ levelScreen.gradientsB = function (f) {
 	}
 }
 
-levelScreen.drawGameWallA = function (gStroke, gFill) {
+/**************************************************************************************************************\
+██████╗ ██████╗  █████╗ ██╗    ██╗     ██████╗  █████╗ ███╗   ███╗███████╗    ██╗    ██╗ █████╗ ██╗     ██╗     
+██╔══██╗██╔══██╗██╔══██╗██║    ██║    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝    ██║    ██║██╔══██╗██║     ██║     
+██║  ██║██████╔╝███████║██║ █╗ ██║    ██║  ███╗███████║██╔████╔██║█████╗      ██║ █╗ ██║███████║██║     ██║     
+██║  ██║██╔══██╗██╔══██║██║███╗██║    ██║   ██║██╔══██║██║╚██╔╝██║██╔══╝      ██║███╗██║██╔══██║██║     ██║     
+██████╔╝██║  ██║██║  ██║╚███╔███╔╝    ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████╗    ╚███╔███╔╝██║  ██║███████╗███████╗
+╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚══╝╚══╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝     ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝
+\**************************************************************************************************************/
+
+// circular corners
+levelScreen.drawGameWallRounded = function (gStroke, gFill) {
 	// width of outside game wall border
 	var edgeWidth = this.edgeWidth;
 	gameCtx.lineWidth = 2.0;
@@ -919,19 +1036,35 @@ levelScreen.drawGameWallA = function (gStroke, gFill) {
 	var rb = this.rb - gameCtx.lineWidth/2.0;
 
 	// wall dimensions
-	var vMiddle = 0.5*(gameCanvas.height + this.tb - this.bb);
+	var vMiddle = 0.5*(gameCanvas.height + tb - bb);
 	var top = tb;
-	var bottom = gameCanvas.height - this.bb;
+	var bottom = gameCanvas.height - bb;
 	var left = lb;
-	var right = gameCanvas.width - this.rb;
-	var r = this.cornerRadius;
+	var right = gameCanvas.width - rb;
+	var r = this.cornerRadius - gameCtx.lineWidth/2.0;
 
 	// goal dimensions
-	var hMiddle = 0.5*(gameCanvas.width + this.lb - this.rb);
+	var bottomEdge = gameCanvas.height - edgeWidth;
+	var hMiddle = 0.5*(gameCanvas.width + lb - rb);
 	var goalWidth = this.goalWidth;
-	var goalLeft = hMiddle - 0.5*goalWidth;
+	var goalLeft = hMiddle - 0.5*goalWidth; // where left edge of goal starts on bottom wall
 	var goalRight = hMiddle + 0.5*goalWidth;
-	var rg = this.bb - edgeWidth;
+	var rg = this.goalRadius - gameCtx.lineWidth/2.0; // radius of circle; note that the wall is the outer edge of the line
+	var b = bb - edgeWidth; // actual width of bottom buffer
+
+	var goalBottom = bottomEdge; // bottom y of goal circles
+	var goalLeftEdge = goalLeft + rg; // x of inner edge on left corner of goal; left edge is at (goalLeftEdge, goalBottom)
+	var goalRightEdge = goalRight - rg;
+	var theta = 0;
+	if (rg > b) { // quarter circle is incomplete
+		var Rcos = Math.sqrt(2*b*rg - b*b);
+		goalLeftEdge = goalLeft + Rcos;
+		goalRightEdge = goalRight - Rcos;
+		theta = Math.acos(Rcos/rg);
+	} else if (rg < b) { // quarter circle is complete and there's still some goal left to make using straight lines
+		goalBottom = bottom + rg;
+	}
+	var goalCenter = bottom + rg; // y of center of goal circles
 
 	// middle line
 	gameCtx.beginPath();
@@ -948,8 +1081,9 @@ levelScreen.drawGameWallA = function (gStroke, gFill) {
 	// note that y is flipped from standard math, so pi/2, usually the +y axis, is actually *down*, not up
 	// start with bottom left, from the goal, and go around the board to the other side of the goal
 	gameCtx.beginPath();
-	gameCtx.moveTo(goalLeft + rg, gameCanvas.height - edgeWidth);
-	gameCtx.arc(goalLeft, gameCanvas.height - edgeWidth, rg, 0, 1.5*Math.PI, true);
+	gameCtx.moveTo(goalLeftEdge, bottomEdge);
+	if (rg < b) gameCtx.lineTo(goalLeftEdge, goalBottom);
+	gameCtx.arc(goalLeft, goalCenter, rg, 2*Math.PI - theta, 1.5*Math.PI, true);
 	gameCtx.lineTo(left + r, bottom);
 	gameCtx.arc(left + r, bottom - r, r, 0.5*Math.PI, Math.PI, false);
 	gameCtx.lineTo(left, top + r);
@@ -959,52 +1093,228 @@ levelScreen.drawGameWallA = function (gStroke, gFill) {
 	gameCtx.lineTo(right, bottom - r);
 	gameCtx.arc(right - r, bottom - r, r, 0, 0.5*Math.PI, false);
 	gameCtx.lineTo(goalRight, bottom);
-	gameCtx.arc(goalRight, gameCanvas.height - edgeWidth, rg, 1.5*Math.PI, Math.PI, true);
+	gameCtx.arc(goalRight, goalCenter, rg, 1.5*Math.PI, Math.PI + theta, true);
+	if (rg < b) gameCtx.lineTo(goalRightEdge, bottomEdge);
 	gameCtx.stroke();
 
 	// outer edge
-	gameCtx.lineTo(gameCanvas.width - edgeWidth, gameCanvas.height - edgeWidth);
+	gameCtx.lineTo(gameCanvas.width - edgeWidth, bottomEdge);
 	gameCtx.lineTo(gameCanvas.width - edgeWidth, edgeWidth);
 	gameCtx.lineTo(edgeWidth, edgeWidth);
 	gameCtx.lineTo(edgeWidth, gameCanvas.height - edgeWidth);
-	gameCtx.lineTo(goalLeft + rg, gameCanvas.height - edgeWidth);
+	gameCtx.lineTo(goalLeftEdge, bottomEdge);
 	gameCtx.fill();
 }
 
-levelScreen.drawStatus = function (f) {
-	if (f === undefined) f = 1;
-	// top of screen, at least for now
-	gameCtx.fillStyle = 'rgba(237, 237, 237, ' + f + ')';
-	gameCtx.font = '36px serif';
-	if (player.lives >= 0) {
-		var livesWidth = gameCtx.measureText(player.lives).width;
-		var livesHeight = 26; // there's no height metric
-		gameCtx.fillText(player.lives, gameCanvas.width - this.edgeWidth - livesWidth - 8, this.edgeWidth + livesHeight + 8);
+levelScreen.drawGameWallClipped = function (gStroke, gFill) {
+	// width of outside game wall border
+	var edgeWidth = this.edgeWidth;
+	gameCtx.lineWidth = 2.0;
+	gameCtx.strokeStyle = gStroke;
+	gameCtx.fillStyle = gFill;
+
+	// width of border between game wall and canvas wall
+	var tb = this.tb - gameCtx.lineWidth/2.0;
+	var bb = this.bb - gameCtx.lineWidth/2.0;
+	var lb = this.lb - gameCtx.lineWidth/2.0;
+	var rb = this.rb - gameCtx.lineWidth/2.0;
+
+	// wall dimensions
+	var vMiddle = 0.5*(gameCanvas.height + tb - bb);
+	var top = tb;
+	var bottom = gameCanvas.height - bb;
+	var left = lb;
+	var right = gameCanvas.width - rb;
+	var r = this.cornerRadius - gameCtx.lineWidth/2.0; // not actually a radius, but it fulfills the same purpose
+
+	// goal dimensions
+	var bottomEdge = gameCanvas.height - edgeWidth;
+	var hMiddle = 0.5*(gameCanvas.width + lb - rb);
+	var goalWidth = this.goalWidth;
+	var goalLeft = hMiddle - 0.5*goalWidth; // where left edge of goal starts on bottom wall
+	var goalRight = hMiddle + 0.5*goalWidth;
+	var rg = this.goalRadius - gameCtx.lineWidth/2.0; // radius of circle; note that the wall is the outer edge of the line
+	var b = bb - edgeWidth; // actual width of bottom buffer
+
+	var goalBottom = bottomEdge; // bottom y of goal lines
+	var goalLeftEdge = goalLeft + rg; // x of inner edge on left corner of goal; left edge is at (goalLeftEdge, goalBottom)
+	var goalRightEdge = goalRight - rg;
+	if (rg > b) {
+		goalLeftEdge = goalLeft + b;
+		goalRightEdge = goalRight - b;
+	} else if (rg < b) {
+		goalBottom = bottom + rg;
 	}
-	// X
-	gameCtx.strokeStyle = rgba(237, 237, 237, f);
-	gameCtx.lineWidth = 2;
+
+	// middle line
 	gameCtx.beginPath();
-	gameCtx.moveTo(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16, this.edgeWidth + livesHeight + 8);
-	gameCtx.lineTo(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16 - livesHeight, this.edgeWidth + 8);
-	gameCtx.moveTo(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16, this.edgeWidth + 8);
-	gameCtx.lineTo(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16 - livesHeight, this.edgeWidth + livesHeight + 8);
+	gameCtx.moveTo(left, vMiddle);
+	gameCtx.lineTo(right, vMiddle);
 	gameCtx.stroke();
-	// ball icon
-	var ballRadius = 15;
-	gameCtx.fillStyle = rgba(255, 255, 255, f);
-	gameCtx.strokeStyle = rgba(141, 128, 180, f);
-	gameCtx.lineWidth = 2;
+
+	// bottom line
 	gameCtx.beginPath();
-	gameCtx.arc(gameCanvas.width - this.edgeWidth - livesWidth - 8 - 16 - livesHeight - 16 - ballRadius, this.edgeWidth + (livesHeight/2.0) + 8, ballRadius, 0, 2*Math.PI, true);
+	gameCtx.moveTo(goalLeft, bottom);
+	gameCtx.lineTo(goalRight, bottom);
+	gameCtx.stroke();
+
+	// start with bottom left, from the goal, and go around the board to the other side of the goal
+	gameCtx.beginPath();
+	gameCtx.moveTo(goalLeftEdge, bottomEdge);
+	if (rg < b) gameCtx.lineTo(goalLeftEdge, goalBottom);
+	gameCtx.lineTo(goalLeft, bottom);
+	gameCtx.lineTo(left + r, bottom);
+	gameCtx.lineTo(left, bottom - r);
+	gameCtx.lineTo(left, top + r);
+	gameCtx.lineTo(left + r, top);
+	gameCtx.lineTo(right - r, top);
+	gameCtx.lineTo(right, top + r);
+	gameCtx.lineTo(right, bottom - r);
+	gameCtx.lineTo(right - r, bottom);
+	gameCtx.lineTo(goalRight, bottom);
+	gameCtx.lineTo(goalRightEdge, goalBottom);
+	if (rg < b) gameCtx.lineTo(goalRightEdge, bottomEdge);
+	gameCtx.stroke();
+
+	// outer edge
+	gameCtx.lineTo(gameCanvas.width - edgeWidth, bottomEdge);
+	gameCtx.lineTo(gameCanvas.width - edgeWidth, edgeWidth);
+	gameCtx.lineTo(edgeWidth, edgeWidth);
+	gameCtx.lineTo(edgeWidth, gameCanvas.height - edgeWidth);
+	gameCtx.lineTo(goalLeftEdge, bottomEdge);
 	gameCtx.fill();
-	gameCtx.stroke();
 }
 
-levelScreen.levelStart = function () {
-	this[this.levelData[this.level]['initPaddleAndBall']]();
-	this[this.levelData[this.level]['initBricks']]();
-};
+/*********************************************************************\
+██╗███╗   ██╗██╗████████╗    ██╗    ██╗ █████╗ ██╗     ██╗     ███████╗
+██║████╗  ██║██║╚══██╔══╝    ██║    ██║██╔══██╗██║     ██║     ██╔════╝
+██║██╔██╗ ██║██║   ██║       ██║ █╗ ██║███████║██║     ██║     ███████╗
+██║██║╚██╗██║██║   ██║       ██║███╗██║██╔══██║██║     ██║     ╚════██║
+██║██║ ╚████║██║   ██║       ╚███╔███╔╝██║  ██║███████╗███████╗███████║
+╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝        ╚══╝╚══╝ ╚═╝  ╚═╝╚══════╝╚══════╝╚══════╝
+\*********************************************************************/
+
+levelScreen.initWallsRounded = function () {
+	// build up walls
+	var goalLeft = (gameCanvas.width + this.lb - this.rb - this.goalWidth)*0.5;
+	var goalRight = (gameCanvas.width + this.lb - this.rb + this.goalWidth)*0.5;
+
+	// create wall objects for collisions
+	// walls actually extend into the rounded corners
+	// left wall
+	var wallL = new Wall(this.lb, this.tb, this.lb, gameCanvas.height - this.bb);
+	// right wall
+	var wallR = new Wall(gameCanvas.width - this.rb, this.tb, gameCanvas.width - this.rb, gameCanvas.height - this.bb);
+	// top wall
+	var wallT = new Wall(this.lb, this.tb, gameCanvas.width - this.rb, this.tb);
+	// bottom wall left of the goal
+	var wallLB = new Wall(this.lb, gameCanvas.height - this.bb, goalLeft, gameCanvas.height - this.bb);
+	// bottom wall right of the goal
+	var wallRB = new Wall(goalRight, gameCanvas.height - this.bb, gameCanvas.width - this.rb, gameCanvas.height - this.bb);
+	// goal line (ball can pass, paddle cannot)
+	var wallG = new Wall(goalLeft, gameCanvas.height - this.bb, goalRight, gameCanvas.height - this.bb);
+	wallG.passable = {CueBall: true};
+	// middle line (ball can pass, paddle cannot)
+	var wallS = new Wall(this.lb, 0.5*(gameCanvas.height + this.tb - this.bb),
+		gameCanvas.width - this.rb, 0.5*(gameCanvas.height + this.tb - this.bb));
+	wallS.passable = {CueBall: true};
+	// circular corners
+	// top left corner
+	var wallTL = new ArcWall(this.lb + this.cornerRadius, this.tb + this.cornerRadius, this.cornerRadius,
+		1.5*Math.PI, Math.PI, true);
+	// top right corner
+	var wallTR = new ArcWall(gameCanvas.width - this.rb - this.cornerRadius, this.tb + this.cornerRadius, this.cornerRadius,
+		0, 1.5*Math.PI, true);
+	// bottom right corner
+	var wallBR = new ArcWall(gameCanvas.width - this.rb - this.cornerRadius, gameCanvas.height - this.bb - this.cornerRadius,
+		this.cornerRadius, 0.5*Math.PI, 0, true);
+	// bottom left corner
+	var wallBL = new ArcWall(this.lb + this.cornerRadius, gameCanvas.height - this.bb - this.cornerRadius, this.cornerRadius,
+		Math.PI, 0.5*Math.PI, true);
+	var wallGL, wallGR, wallHL, wallHR, wallEL, wallER;
+	if (this.goalRadius <= this.bb) {
+		// left corner of goal
+		wallGL = new ArcWall(goalLeft, gameCanvas.height - this.bb + this.goalRadius, this.goalRadius, 0, 1.5*Math.PI, true);
+		// right corner of goal
+		wallGR = new ArcWall(goalRight, gameCanvas.height - this.bb + this.goalRadius, this.goalRadius, 1.5*Math.PI, Math.PI, true);
+		// left and right sides of goal corridor -- out of view but necessary to prevent glitches
+		wallHL = new Wall(goalLeft + this.goalRadius, gameCanvas.height - this.bb + this.goalRadius, goalLeft + this.goalRadius, gameCanvas.height + 500);
+		wallHR = new Wall(goalRight - this.goalRadius, gameCanvas.height - this.bb + this.goalRadius, goalRight - this.goalRadius, gameCanvas.height + 500);
+		wallEL = undefined;
+		wallER = undefined;
+	} else {
+		// the goal circles are too big for the buffer, so they have to be partial circles, but then they have to smoothly connect to the verticals
+		var Rcos = Math.sqrt(2*this.bb*this.goalRadius - this.bb*this.bb);
+		var rcos = Rcos*this.extraRadius/this.goalRadius;
+		var theta = Math.acos(Rcos/this.goalRadius);
+		var rsin = this.extraRadius*(this.goalRadius - this.bb)/(this.goalRadius);
+		// left corner of goal
+		wallGL = new ArcWall(goalLeft, gameCanvas.height - this.bb + this.goalRadius, this.goalRadius, 2*Math.PI - theta, 1.5*Math.PI, true);
+		// right corner of goal
+		wallGR = new ArcWall(goalRight, gameCanvas.height - this.bb + this.goalRadius, this.goalRadius, 1.5*Math.PI, Math.PI - theta, true);
+		// these circles don't go from horizontal to vertical, so we're going to add small circles with this.extraRadius to get there smoothly
+		wallEL = new ArcWall(goalLeft + Rcos - rcos, gameCanvas.height + rsin, this.extraRadius, 0, 2*Math.PI - theta, true);
+		wallER = new ArcWall(goalRight - Rcos + rcos, gameCanvas.height + rsin, this.extraRadius, Math.PI - theta, Math.PI, true);
+		wallHL = new Wall(goalLeft + Rcos - rcos + this.extraRadius, gameCanvas.height + rsin, goalLeft + Rcos - rcos + this.extraRadius, gameCanvas.height + 500);
+		wallHR = new Wall(goalRight - Rcos + rcos - this.extraRadius, gameCanvas.height + rsin, goalRight - Rcos + rcos - this.extraRadius, gameCanvas.height + 500);
+	}
+	// add walls to list for collisions
+	this.walls = [wallL, wallR, wallT, wallLB, wallRB, wallS, wallG, wallTL, wallTR, wallBR, wallBL, wallGL, wallGR, wallHL, wallHR];
+	if (wallEL !== undefined) this.walls.push(wallEL);
+	if (wallER !== undefined) this.walls.push(wallER);
+}
+
+levelScreen.initWallsClipped = function () {
+	// build up walls
+	var goalLeft = (gameCanvas.width + this.lb - this.rb - this.goalWidth)*0.5;
+	var goalRight = (gameCanvas.width + this.lb - this.rb + this.goalWidth)*0.5;
+
+	// create wall objects for collisions
+	// left wall
+	var wallL = new Wall(this.lb, this.tb, this.lb, gameCanvas.height - this.bb);
+	// right wall
+	var wallR = new Wall(gameCanvas.width - this.rb, this.tb, gameCanvas.width - this.rb, gameCanvas.height - this.bb);
+	// top wall
+	var wallT = new Wall(this.lb, this.tb, gameCanvas.width - this.rb, this.tb);
+	// bottom wall left of the goal
+	var wallLB = new Wall(this.lb, gameCanvas.height - this.bb, goalLeft, gameCanvas.height - this.bb);
+	// bottom wall right of the goal
+	var wallRB = new Wall(goalRight, gameCanvas.height - this.bb, gameCanvas.width - this.rb, gameCanvas.height - this.bb);
+	// goal line (ball can pass, paddle cannot)
+	var wallG = new Wall(goalLeft, gameCanvas.height - this.bb, goalRight, gameCanvas.height - this.bb);
+	wallG.passable = {CueBall: true};
+	// middle line (ball can pass, paddle cannot)
+	var wallS = new Wall(this.lb, 0.5*(gameCanvas.height + this.tb - this.bb),
+		gameCanvas.width - this.rb, 0.5*(gameCanvas.height + this.tb - this.bb));
+	wallS.passable = {CueBall: true};
+	// clipped corners
+	var wallTL = new Wall(this.lb, this.tb + this.cornerRadius, this.lb + this.cornerRadius, this.tb);
+	var wallTR = new Wall(gameCanvas.width - this.rb, this.tb + this.cornerRadius, gameCanvas.width - this.rb - this.cornerRadius, this.tb);
+	var wallBL = new Wall(this.lb, gameCanvas.height - this.bb - this.cornerRadius, this.lb + this.cornerRadius, gameCanvas.height - this.bb);
+	var wallBR = new Wall(gameCanvas.width - this.rb, gameCanvas.height - this.bb - this.cornerRadius, gameCanvas.width - this.rb - this.cornerRadius, gameCanvas.height - this.bb);
+
+	// goal walls
+	var rEff = this.goalRadius;
+	if (this.goalRadius > this.bb) rEff = this.bb;
+	var wallGL = new Wall(goalLeft, gameCanvas.height - this.bb, goalLeft + rEff, gameCanvas.height - this.bb + rEff);
+	wallGL.open = false; // collisions on the corners
+	var wallGR = new Wall(goalRight, gameCanvas.height - this.bb, goalRight - rEff, gameCanvas.height - this.bb + rEff);
+	wallGL.open = false;
+	var wallHL = new Wall(goalLeft + rEff, gameCanvas.height - this.bb + rEff, goalLeft + rEff, gameCanvas.height + 500);
+	var wallHR = new Wall(goalRight - rEff, gameCanvas.height - this.bb + rEff, goalRight - rEff, gameCanvas.height + 500);
+
+	// add walls to list for collisions
+	this.walls = [wallL, wallR, wallT, wallLB, wallRB, wallS, wallG, wallTL, wallTR, wallBR, wallBL, wallGL, wallGR, wallHL, wallHR];
+}
+
+/**********************************************************************\
+██╗███╗   ██╗██╗████████╗    ██████╗ ██████╗ ██╗ ██████╗██╗  ██╗███████╗
+██║████╗  ██║██║╚══██╔══╝    ██╔══██╗██╔══██╗██║██╔════╝██║ ██╔╝██╔════╝
+██║██╔██╗ ██║██║   ██║       ██████╔╝██████╔╝██║██║     █████╔╝ ███████╗
+██║██║╚██╗██║██║   ██║       ██╔══██╗██╔══██╗██║██║     ██╔═██╗ ╚════██║
+██║██║ ╚████║██║   ██║       ██████╔╝██║  ██║██║╚██████╗██║  ██╗███████║
+╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝       ╚═════╝ ╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝
+\**********************************************************************/
 
 levelScreen.initBricks1 = function () {
 	for (var i = 0; i < 10; i++) {
@@ -1043,6 +1353,22 @@ levelScreen.initBricks2 = function () {
 	}
 };
 
+/***************************************************************************\
+██╗███╗   ██╗██╗████████╗    ██████╗  █████╗ ██████╗ ██████╗ ██╗     ███████╗
+██║████╗  ██║██║╚══██╔══╝    ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██║     ██╔════╝
+██║██╔██╗ ██║██║   ██║       ██████╔╝███████║██║  ██║██║  ██║██║     █████╗  
+██║██║╚██╗██║██║   ██║       ██╔═══╝ ██╔══██║██║  ██║██║  ██║██║     ██╔══╝  
+██║██║ ╚████║██║   ██║       ██║     ██║  ██║██████╔╝██████╔╝███████╗███████╗
+╚═╝╚═╝  ╚═══╝╚═╝   ╚═╝       ╚═╝     ╚═╝  ╚═╝╚═════╝ ╚═════╝ ╚══════╝╚══════╝
+
+ █████╗ ███╗   ██╗██████╗     ██████╗  █████╗ ██╗     ██╗     
+██╔══██╗████╗  ██║██╔══██╗    ██╔══██╗██╔══██╗██║     ██║     
+███████║██╔██╗ ██║██║  ██║    ██████╔╝███████║██║     ██║     
+██╔══██║██║╚██╗██║██║  ██║    ██╔══██╗██╔══██║██║     ██║     
+██║  ██║██║ ╚████║██████╔╝    ██████╔╝██║  ██║███████╗███████╗
+╚═╝  ╚═╝╚═╝  ╚═══╝╚═════╝     ╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝
+\***************************************************************************/
+
 levelScreen.initPaddleAndBallA = function () {
 	// could be level-dependent
 	gameCtx.lineWidth = 2;
@@ -1056,65 +1382,6 @@ levelScreen.initPaddleAndBallA = function () {
 	var ball = new CueBall(gameCanvas.width*0.5, gameCanvas.height*(5.0/6.0), 0, 0, 15);
 	ball.captured = paddle;
 	this.balls.push(ball);
-};
-
-levelScreen.nextLevel = function () {
-	if (this.level >= 2) { // max level; put this variable elsewhere
-		gameState.level = false;
-		endingScreen.gameWon();
-	} else {
-		levelScreen.initLevel(this.level + 1);
-	}
-};
-
-levelScreen.gameOver = function () {
-	gameState.level = false;
-	endingScreen.gameOver();
-};
-
-levelScreen.mouseMove = function (x, y) {
-	if (this.paddle) this.paddle.move(x,y);
-};
-
-levelScreen.mouseUp = function (x, y) {
-	this.retrieveLostBallNext = true;
-};
-
-levelScreen.capture = function () {
-	for (var b = 0; b < this.balls.length; b++) {
-		this.paddle.capture(this.balls[b]);
-	}
-};
-
-levelScreen.reviseCapture = function () {
-	this.paddle.capturing = false;
-	for (var b = 0; b < this.balls.length; b++) {
-		this.paddle.reviseCapture(this.balls[b]);
-	}
-};
-
-levelScreen.retrieveLostBall = function () {
-	var lostBall = false;
-	for (var b = 0; b < this.balls.length; b++) {
-		if (this.balls[b].expired) lostBall = true;
-	}
-	if (!lostBall) return;
-	var minTouch = this.balls[0].lastTouched + 1;
-	var minBall = -1;
-	for (var b = 0; b < this.balls.length; b++) {
-		if (this.balls[b].lastTouched < minTouch) {
-			minTouch = this.balls[b].lastTouched;
-			minBall = b;
-		}
-	}
-	this.paddle.capturing = true;
-	this.balls[minBall].captured = this.paddle;
-	this.balls[minBall].x = this.paddle.x + (4*Math.random() - 2); // don't center it to prevent concentric collisions
-	this.balls[minBall].y = this.paddle.y + (4*Math.random() - 2);
-	this.balls[minBall].lastPosition.x = this.balls[minBall].x;
-	this.balls[minBall].lastPosition.y = this.balls[minBall].y;
-	this.balls[minBall].vx = 0;
-	this.balls[minBall].vy = 0;
 };
 
 /**********************************************\
@@ -1401,7 +1668,14 @@ function onKeyDown(e) {
  ╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚═╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝
 \************************************************************************/
 
-var collisions = {
+// performs a collision of two GameObjects
+function collide(obj1, obj2) {
+	if (collisions[obj1.type] == undefined || collisions[obj1.type][obj2.type] == undefined) return;
+	if (obj1.locked || obj2.locked) return; // don't collide locked objects
+	collisions[obj1.type][obj2.type](obj1, obj2);
+}
+
+collisions = {
 	Wall: {
 		Wall: function (wall1, wall2) {}, // no collisions between walls
 		PurpleBall: function (wall, ball) {
@@ -1426,12 +1700,7 @@ var collisions = {
 		CueBall: function (wall, ball) {
 			if (wall.passable[ball.type]) return;
 			var collData = wallBallCollision(wall, ball);
-			if (collData) {
-				//console.log('ball - wall: ' + collData.dp);
-				var sound = new Tone(4*C1, 100, 3*collData.dp/100000000.0);
-				sound.setFormula('triangle');
-				sound.play();
-			}
+			if (collData) soundBank.wallClunk(collData.dp/100000000.0);
 		}
 	},
 	PurpleBall: {
@@ -1461,9 +1730,7 @@ var collisions = {
 			if (collData) {
 				ball.lastTouched = 0;
 				ball.expired = false;
-				//console.log('ball - paddle: ' + collData.dp);
-				var sound = new Tone(8*C1, 100, collData.dp/100000000.0);
-				sound.play();
+				soundBank.paddleTouch(collData.dp/100000000.0);
 			}
 		},
 		ArcWall: function (paddle, arc) {
@@ -1487,21 +1754,7 @@ var collisions = {
 			ball.vy += 2*collData.vnf*collData.u.y;
 			var dp = 2*collData.vnf*ball.mass  // change in momentum of ball
 			brick.damage(dp);
-			//console.log('ball - brick: ' + dp);
-			var sound1 = new Tone(16*C1, 50, 0.7*dp/100000000.0);
-			var sound2 = new Tone(brick.frequency, 50, 0.7*dp/100000000.0);
-			sound1.setFormula('sawtooth5');
-			sound2.setFormula('sine');
-			sound1.envelope.attackGain = brick.dying ? 4.0 : 1.5;
-			sound1.envelope.attack = brick.dying ? 5 : 10;
-			sound1.envelope.decay = 10;
-			sound1.envelope.release = brick.dying ? 200 : 50;
-			sound2.envelope.attackGain = brick.dying ? 4.0 : 1.5;
-			sound2.envelope.attack = brick.dying ? 5 : 10;
-			sound2.envelope.decay = 10;
-			sound2.envelope.release = brick.dying ? 200 : 50;
-			sound1.play();
-			sound2.play();
+			brick.dying ? soundBank.brickDestroy(dp/100000000.0, brick.frequency) : soundBank.brickClunk(dp/100000000.0, brick.frequency)
 		},
 		ArcWall: function (ball, arc) {
 			collisions['ArcWall']['CueBall'](arc, ball);
@@ -1531,10 +1784,7 @@ var collisions = {
 			}
 			if (collData && collData.type != "near collision") {
 				var dp = ball.mass*2*collData.vnf;
-				//console.log('ball - arc wall: ' + dp);
-				var sound = new Tone(4*C1, 100, 3*dp/100000000.0);
-				sound.setFormula('triangle');
-				sound.play();
+				soundBank.wallClunk(dp/100000000.0);
 			}
 		},
 		PlayerPaddle: function (arc, paddle) {
@@ -1548,61 +1798,6 @@ var collisions = {
 		}
 	}
 };
-
-// performs a collision of two GameObjects
-function collide(obj1, obj2) {
-	if (collisions[obj1.type] == undefined || collisions[obj1.type][obj2.type] == undefined) return;
-	if (obj1.locked || obj2.locked) return; // don't collide locked objects
-	collisions[obj1.type][obj2.type](obj1, obj2);
-}
-
-// returns an object of useful information regarding a circle-circle collision
-// null if they don't collide
-// ball1 and ball2 have properties x, y, vx, vy, radius, mass
-// cR is the coefficient of restitution, 1.0 for elastic and 0.0 for inelastic
-function circleCircleKinematics(ball1, ball2, cR) {
-	var ds = distance(ball1.x, ball1.y, ball2.x, ball2.y);
-	if (ds > ball1.radius + ball2.radius) return null; // no collision
-	if (ds == 0) return {type: "concentric"};
-	var compLength = ball1.radius + ball2.radius - ds;
-	var compression = {
-		total: compLength,
-		1: compLength*ball2.radius/(ball1.radius + ball2.radius),
-		2: compLength*ball1.radius/(ball1.radius + ball2.radius)
-	};
-	var dx = ball2.x - ball1.x;
-	var dy = ball2.y - ball1.y;
-	var ux = dx/ds;
-	var uy = dy/ds;
-	var v1 = ball1.vx*ux + ball1.vy*uy; // projection along axis of collision;
-	var v2 = ball2.vx*ux + ball2.vy*uy; // v1 - v2 should be positive
-	var v1f = v1; // no change if v1 - v2 is negative
-	var v2f = v2;
-	if (v1 - v2 > 0) {
-		if (!isNaN(ball1.mass) && !isNaN(ball2.mass)) {
-			v1f = (cR*ball2.mass*(v2 - v1) + ball1.mass*v1 + ball2.mass*v2)/(ball1.mass + ball2.mass);
-			v2f = (cR*ball1.mass*(v1 - v2) + ball1.mass*v1 + ball2.mass*v2)/(ball1.mass + ball2.mass);
-		} else if (isNaN(ball1.mass) && isNaN(ball2.mass)) {
-			// no collision
-		} else if (isNaN(ball1.mass)) {
-			v2f = cR*(v1 - v2) + v1;
-		} else {
-			v1f = cR*(v2 - v1) + v2;
-		}
-	}
-	return {
-		type: "normal",
-		compression: compression, // how much each ball is compressed due to discrete frames
-		v1: v1, // velocity of ball 1 prior to impact along the axis of collision
-		v2: v2,
-		v1f: v1f, // velocity of ball 1 after impact along the axis of collision
-		v2f: v2f,
-		u: { // unit vector pointing from the center of ball 1 towards the center of ball 2
-			x: ux,
-			y: uy,
-		}
-	};
-}
 
 function ballBallCollision(ball1, ball2) {
 	var collData = circleCircleKinematics(ball1, ball2, 1.0);
@@ -1640,70 +1835,13 @@ function ballBallCollision(ball1, ball2) {
 		ball1.x -= collData.compression.total*collData.u.x;
 		ball1.y -= collData.compression.total*collData.u.y;
 	}
-	return {v1: collData.v1, v2: collData.v2, v1f: collData.v1f, v2f: collData.v2f};
-}
-
-// returns an object of useful information regarding a circle-line segment collision
-// null if they don't collide
-function lineCircleKinematics(wall, ball) {
-	var centerToLine = Math.abs((wall.A*ball.x + wall.B*ball.y + wall.C)/wall.D);
-	if (centerToLine > 2*ball.radius) {
-		return null;
-	}
-	var xColl = (wall.B*(wall.B*ball.x - wall.A*ball.y) - wall.A*wall.C)/(wall.A*wall.A + wall.B*wall.B);
-	var yColl = (wall.A*(wall.A*ball.y - wall.B*ball.x) - wall.B*wall.C)/(wall.A*wall.A + wall.B*wall.B);
-	if (wall.B) { // not vertical wall
-		if (wall.x1 < xColl && xColl < wall.x2) { // hits the wall
-		} else if (wall.open) {
-			return null
-		} else if (xColl <= wall.x1) {
-			if (distance(wall.x1, wall.y1, ball.x, ball.y) <= 2*ball.radius) { // corner hit
-				xColl = wall.x1;
-				yColl = wall.y1;
-			} else return null;
-		} else if (wall.x2 <= xColl) {
-			if (distance(wall.x2, wall.y2, ball.x, ball.y) <= 2*ball.radius) {
-				xColl = wall.x2;
-				yColl = wall.y2;
-			} else return null;
-		} else return null;
-	} else { // vertical
-		var ys = (wall.y1 < wall.y2) ? wall.y1 : wall.y2;
-		var yl = (wall.y1 < wall.y2) ? wall.y2 : wall.y1;
-		if (ys < yColl && yColl < yl) { // hits the wall
-		} else if (wall.open) {
-			return null;
-		} else if (yColl <= ys) {
-			if (distance(wall.x1, ys, ball.x, ball.y) <= 2*ball.radius) { // corner hit
-				yColl = ys;
-			} else return null;
-		} else if (yl <= yColl) {
-			if (distance(wall.x1, yl, ball.x, ball.y) <= 2*ball.radius) { // corner hit
-				yColl = yl;
-			} else return null;
-		} else return null;
-	}
-	var dx = ball.x - xColl;
-	var dy = ball.y - yColl;
-	var ds = distance(xColl, yColl, ball.x, ball.y);
-	if (ds == 0) return {type: "center on line"};
-	if ((ball.lastPosition.x - xColl)*dx + (ball.lastPosition.y - yColl)*dy < 0) ds *= -1;
-	var compression = ball.radius - ds;
-	var ux = dx/ds; // unit vector from point of collision to center of ball
-	var uy = dy/ds;
-	var vn = ball.vx*ux + ball.vy*uy; // projection of ball's velocity onto the unit vector
-	if (ds > ball.radius/* && vn < 0*/) {
-		return {type: "near collision"};
-	}
+	var dp = ball1.mass*(collData.v1f - collData.v1) + ball2.mass*(collData.v2 - collData.v2f);
 	return {
-		type: "normal",
-		compression: compression,
-		vn: vn,
-		vnf: -vn, // the ball bounces back at the same normal velocity
-		u: {
-			x: ux,
-			y: uy
-		}
+		v1: collData.v1,
+		v2: collData.v2,
+		v1f: collData.v1f,
+		v2f: collData.v2f,
+		dp: dp
 	};
 }
 
@@ -1779,6 +1917,158 @@ function ballPaddleCollision(ball, paddle) {
 	}
 	var pnf = ball.mass*(ball.vx*collData.u.x + ball.vy*collData.u.y); // final momentum of ball along axis of collision
 	return {dp: Math.abs(pn - pnf)};
+}
+
+// deals with compression for an arc collision
+function arcBallCompression(arc, ball, collData) { // also works on a paddle
+	if (!collData || !collData.u) return; // collData from arcCircleKinematics
+	var xn = ball.x + collData.compression*collData.u.x; // new location
+	var yn = ball.y + collData.compression*collData.u.y;
+	if (distance(xn,yn,collData.x1,collData.y1) < ball.radius || distance(xn,yn,collData.x2,collData.y2) < ball.radius) {
+		if (ball.radius == arc.radius) {
+			ball.x = arc.x;
+			ball.y = arc.y;
+		} else if (ball.radius > arc.radius) {
+			var to2 = 0.5*(arc.t2 - arc.t1);
+			var s = ball.radius*Math.sqrt(1 - ((arc.radius*arc.radius)/(ball.radius*ball.radius))*Math.pow(Math.sin(to2),2)) -
+				arc.radius*Math.cos(to2);
+			var px = -Math.cos(0.5*(arc.t1 + arc.t2));
+			var py = -Math.sin(0.5*(arc.t1 + arc.t2));
+			ball.x = arc.x + s*px;
+			ball.y = arc.y + s*py;
+		} else { // other case is never going to happen but we might as well be careful
+			ball.x = xn;
+			ball.y = yn;
+		}
+	} else {
+		ball.x = xn;
+		ball.y = yn;
+	}
+	if (debug) {
+		ball.collData = collData; // so we can inspect issues here
+		if (ball.x == 740 && ball.y == 740) console.log('wall');
+	}
+}
+
+/**************************************************************************\
+██╗  ██╗██╗███╗   ██╗███████╗███╗   ███╗ █████╗ ████████╗██╗ ██████╗███████╗
+██║ ██╔╝██║████╗  ██║██╔════╝████╗ ████║██╔══██╗╚══██╔══╝██║██╔════╝██╔════╝
+█████╔╝ ██║██╔██╗ ██║█████╗  ██╔████╔██║███████║   ██║   ██║██║     ███████╗
+██╔═██╗ ██║██║╚██╗██║██╔══╝  ██║╚██╔╝██║██╔══██║   ██║   ██║██║     ╚════██║
+██║  ██╗██║██║ ╚████║███████╗██║ ╚═╝ ██║██║  ██║   ██║   ██║╚██████╗███████║
+╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝╚══════╝
+\**************************************************************************/
+
+// returns an object of useful information regarding a circle-circle collision
+// null if they don't collide
+// ball1 and ball2 have properties x, y, vx, vy, radius, mass
+// cR is the coefficient of restitution, 1.0 for elastic and 0.0 for inelastic
+function circleCircleKinematics(ball1, ball2, cR) {
+	var ds = distance(ball1.x, ball1.y, ball2.x, ball2.y);
+	if (ds > ball1.radius + ball2.radius) return null; // no collision
+	if (ds == 0) return {type: "concentric"};
+	var compLength = ball1.radius + ball2.radius - ds;
+	var compression = {
+		total: compLength,
+		1: compLength*ball2.radius/(ball1.radius + ball2.radius),
+		2: compLength*ball1.radius/(ball1.radius + ball2.radius)
+	};
+	var dx = ball2.x - ball1.x;
+	var dy = ball2.y - ball1.y;
+	var ux = dx/ds;
+	var uy = dy/ds;
+	var v1 = ball1.vx*ux + ball1.vy*uy; // projection along axis of collision;
+	var v2 = ball2.vx*ux + ball2.vy*uy; // v1 - v2 should be positive
+	var v1f = v1; // no change if v1 - v2 is negative
+	var v2f = v2;
+	if (v1 - v2 > 0) {
+		if (!isNaN(ball1.mass) && !isNaN(ball2.mass)) {
+			v1f = (cR*ball2.mass*(v2 - v1) + ball1.mass*v1 + ball2.mass*v2)/(ball1.mass + ball2.mass);
+			v2f = (cR*ball1.mass*(v1 - v2) + ball1.mass*v1 + ball2.mass*v2)/(ball1.mass + ball2.mass);
+		} else if (isNaN(ball1.mass) && isNaN(ball2.mass)) {
+			// no collision
+		} else if (isNaN(ball1.mass)) {
+			v2f = cR*(v1 - v2) + v1;
+		} else {
+			v1f = cR*(v2 - v1) + v2;
+		}
+	}
+	return {
+		type: "normal",
+		compression: compression, // how much each ball is compressed due to discrete frames
+		v1: v1, // velocity of ball 1 prior to impact along the axis of collision
+		v2: v2,
+		v1f: v1f, // velocity of ball 1 after impact along the axis of collision
+		v2f: v2f,
+		u: { // unit vector pointing from the center of ball 1 towards the center of ball 2
+			x: ux,
+			y: uy,
+		}
+	};
+}
+
+// returns an object of useful information regarding a circle-line segment collision
+// null if they don't collide
+function lineCircleKinematics(wall, ball) {
+	var centerToLine = Math.abs((wall.A*ball.x + wall.B*ball.y + wall.C)/wall.D);
+	if (centerToLine > 2*ball.radius) {
+		return null;
+	}
+	var xColl = (wall.B*(wall.B*ball.x - wall.A*ball.y) - wall.A*wall.C)/(wall.A*wall.A + wall.B*wall.B);
+	var yColl = (wall.A*(wall.A*ball.y - wall.B*ball.x) - wall.B*wall.C)/(wall.A*wall.A + wall.B*wall.B);
+	if (wall.B) { // not vertical wall
+		if (wall.x1 < xColl && xColl < wall.x2) { // hits the wall
+		} else if (wall.open) {
+			return null
+		} else if (xColl <= wall.x1) {
+			if (distance(wall.x1, wall.y1, ball.x, ball.y) <= 2*ball.radius) { // corner hit
+				xColl = wall.x1;
+				yColl = wall.y1;
+			} else return null;
+		} else if (wall.x2 <= xColl) {
+			if (distance(wall.x2, wall.y2, ball.x, ball.y) <= 2*ball.radius) {
+				xColl = wall.x2;
+				yColl = wall.y2;
+			} else return null;
+		} else return null;
+	} else { // vertical
+		var ys = (wall.y1 < wall.y2) ? wall.y1 : wall.y2;
+		var yl = (wall.y1 < wall.y2) ? wall.y2 : wall.y1;
+		if (ys < yColl && yColl < yl) { // hits the wall
+		} else if (wall.open) {
+			return null;
+		} else if (yColl <= ys) {
+			if (distance(wall.x1, ys, ball.x, ball.y) <= 2*ball.radius) { // corner hit
+				yColl = ys;
+			} else return null;
+		} else if (yl <= yColl) {
+			if (distance(wall.x1, yl, ball.x, ball.y) <= 2*ball.radius) { // corner hit
+				yColl = yl;
+			} else return null;
+		} else return null;
+	}
+	var dx = ball.x - xColl;
+	var dy = ball.y - yColl;
+	var ds = distance(xColl, yColl, ball.x, ball.y);
+	if (ds == 0) return {type: "center on line"};
+	if ((ball.lastPosition.x - xColl)*dx + (ball.lastPosition.y - yColl)*dy < 0) ds *= -1;
+	var compression = ball.radius - ds;
+	var ux = dx/ds; // unit vector from point of collision to center of ball
+	var uy = dy/ds;
+	var vn = ball.vx*ux + ball.vy*uy; // projection of ball's velocity onto the unit vector
+	if (ds > ball.radius/* && vn < 0*/) {
+		return {type: "near collision"};
+	}
+	return {
+		type: "normal",
+		compression: compression,
+		vn: vn,
+		vnf: -vn, // the ball bounces back at the same normal velocity
+		u: {
+			x: ux,
+			y: uy
+		}
+	};
 }
 
 function circleRectangleKinematics(ball, brick) {
@@ -1966,37 +2256,6 @@ function arcCircleKinematics(arc, ball, cR) { // yay polar coordinates
 		x2: x2,
 		y2: y2
 	};
-}
-
-// deals with compression for an arc collision
-function arcBallCompression(arc, ball, collData) { // also works on a paddle
-	if (!collData || !collData.u) return; // collData from arcCircleKinematics
-	var xn = ball.x + collData.compression*collData.u.x; // new location
-	var yn = ball.y + collData.compression*collData.u.y;
-	if (distance(xn,yn,collData.x1,collData.y1) < ball.radius || distance(xn,yn,collData.x2,collData.y2) < ball.radius) {
-		if (ball.radius == arc.radius) {
-			ball.x = arc.x;
-			ball.y = arc.y;
-		} else if (ball.radius > arc.radius) {
-			var to2 = 0.5*(arc.t2 - arc.t1);
-			var s = ball.radius*Math.sqrt(1 - ((arc.radius*arc.radius)/(ball.radius*ball.radius))*Math.pow(Math.sin(to2),2)) -
-				arc.radius*Math.cos(to2);
-			var px = -Math.cos(0.5*(arc.t1 + arc.t2));
-			var py = -Math.sin(0.5*(arc.t1 + arc.t2));
-			ball.x = arc.x + s*px;
-			ball.y = arc.y + s*py;
-		} else { // other case is never going to happen but we might as well be careful
-			ball.x = xn;
-			ball.y = yn;
-		}
-	} else {
-		ball.x = xn;
-		ball.y = yn;
-	}
-	if (debug) {
-		ball.collData = collData; // so we can inspect issues here
-		if (ball.x == 740 && ball.y == 740) console.log('wall');
-	}
 }
 
 /****************************************************************************************\
@@ -2227,12 +2486,7 @@ PlayerPaddle.prototype.capture = function (ball) {
 		if (ds < this.radius + ball.radius) {
 			ball.capturedBy(this);
 			this.capturing = true;
-			var sound1 = new Tone(12*C1, 150, 0.05);
-			sound1.setFormula('square');
-			sound1.play();
-			var sound2 = new Tone(6*C1, 150, 0.02);
-			sound2.setFormula('triangle');
-			sound2.play();
+			soundBank.paddleCapture();
 		}
 	}
 	this.lifted = false;
@@ -2789,7 +3043,77 @@ Tone.prototype.setFormula = function (formula) {
 	} else if (typeof formula == 'function') this.formula = formula;
 }
 
+/********************************************************************************\
+███████╗ ██████╗ ██╗   ██╗███╗   ██╗██████╗     ██████╗  █████╗ ███╗   ██╗██╗  ██╗
+██╔════╝██╔═══██╗██║   ██║████╗  ██║██╔══██╗    ██╔══██╗██╔══██╗████╗  ██║██║ ██╔╝
+███████╗██║   ██║██║   ██║██╔██╗ ██║██║  ██║    ██████╔╝███████║██╔██╗ ██║█████╔╝ 
+╚════██║██║   ██║██║   ██║██║╚██╗██║██║  ██║    ██╔══██╗██╔══██║██║╚██╗██║██╔═██╗ 
+███████║╚██████╔╝╚██████╔╝██║ ╚████║██████╔╝    ██████╔╝██║  ██║██║ ╚████║██║  ██╗
+╚══════╝ ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚═════╝     ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝
+\********************************************************************************/
 
+// functions to create sounds
+soundBank = {
+	'death': function () {
+		var sound = new Tone(2*C1, 150, 0.3);
+		sound.envelope.attack = 20;
+		sound.envelope.attackGain = 1.2;
+		sound.play();
+	},
+	'wallClunk': function (p) {
+		var sound = new Tone(4*C1, 100, 3*p);
+		sound.setFormula('triangle');
+		sound.play();
+	},
+	'paddleTouch': function (p) {
+		var sound = new Tone(8*C1, 100, p);
+		sound.play();
+	},
+	'paddleCapture': function () {
+		var sound1 = new Tone(16*C1, 50, 0.09);
+		var sound2 = new Tone(8*C1, 50, 0.03);
+		sound1.setFormula('triangle');
+		sound2.setFormula('square');
+		sound1.envelope.release = 400;
+		sound1.envelope.attackGain = 1.0;
+		sound2.envelope.release = 200;
+		sound2.envelope.attackGain = 1.5
+		sound1.play();
+		sound2.play();
+	},
+	'brickClunk': function (p, freq) {
+		var sound1 = new Tone(16*C1, 50, 0.7*p);
+		var sound2 = new Tone(freq, 50, 0.7*p);
+		sound1.setFormula('sawtooth5');
+		sound2.setFormula('sine');
+		sound1.envelope.attackGain = 1.5;
+		sound1.envelope.attack = 10;
+		sound1.envelope.decay = 10;
+		sound1.envelope.release = 50;
+		sound2.envelope.attackGain = 1.5;
+		sound2.envelope.attack = 10;
+		sound2.envelope.decay = 10;
+		sound2.envelope.release = 50;
+		sound1.play();
+		sound2.play();
+	},
+	'brickDestroy': function (p, freq) {
+		var sound1 = new Tone(16*C1, 50, 0.7*p);
+		var sound2 = new Tone(freq, 50, 0.7*p);
+		sound1.setFormula('sawtooth5');
+		sound2.setFormula('sine');
+		sound1.envelope.attackGain = 4.0;
+		sound1.envelope.attack = 5;
+		sound1.envelope.decay = 10;
+		sound1.envelope.release = 200;
+		sound2.envelope.attackGain = 4.0;
+		sound2.envelope.attack = 5;
+		sound2.envelope.decay = 10;
+		sound2.envelope.release = 200;
+		sound1.play();
+		sound2.play();
+	}
+};
 
 
 
