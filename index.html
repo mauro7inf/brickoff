@@ -505,6 +505,7 @@ levelScreen = {
 	goalRadius: 45, // radius of goal's rounded edges;
 	extraRadius: 5, // if the goal radius is too big, this smoothes out the hidden goal corner
 	edgeWidth: 5, // width of edge around game canvas
+	centerLineOffset: 0, // how far down the center line is from the middle
 
 	// level data
 	levelData: {
@@ -565,21 +566,22 @@ levelScreen = {
 			}
 		},
 		3: {
-			title: 'Squares',
+			title: 'They Heal',
 			newLives: 1,
 			geometry: {
-				cornerRadius: 100,
+				cornerRadius: 1,
 				tb: 50,
 				bb: 50,
 				lb: 50,
 				rb: 50,
-				goalWidth: 250,
-				goalRadius: 0
+				goalWidth: 150,
+				goalRadius: 1,
+				centerLineOffset: 52
 			},
-			initWalls: 'initWallsB',
+			initWalls: 'initWallsClipped',
 			initBricks: 'initBricks3',
 			initPaddleAndBall: 'initPaddleAndBallA',
-			drawGameWall: 'drawGameWallB',
+			drawGameWall: 'drawGameWallClipped',
 			gradients: 'gradientsC',
 			outlineFill: {
 				r: 30,
@@ -629,6 +631,7 @@ levelScreen.initLevel = function (n) {
 	this.rb = geometry.rb;
 	this.goalWidth = geometry.goalWidth;
 	this.goalRadius = geometry.goalRadius;
+	if (geometry.centerLineOffset !== undefined) this.centerLineOffset = geometry.centerLineOffset;
 
 	// make walls
 	this[this.levelData[this.level]['initWalls']]();
@@ -643,7 +646,7 @@ levelScreen.levelStart = function () {
 };
 
 levelScreen.nextLevel = function () {
-	if (this.level >= 2) { // max level; put this variable elsewhere
+	if (this.level >= 3) { // max level; put this variable elsewhere
 		gameState.level = false;
 		endingScreen.gameWon();
 	} else {
@@ -1012,6 +1015,36 @@ levelScreen.gradientsB = function (f) {
 	}
 }
 
+levelScreen.gradientsC = function (f) {
+	gameCtx.lineWidth = 2;
+
+	// width of border between game wall and canvas wall
+	var tb = this.tb - gameCtx.lineWidth/2.0;
+	var bb = this.bb - gameCtx.lineWidth/2.0;
+	var lb = this.lb - gameCtx.lineWidth/2.0;
+	var rb = this.rb - gameCtx.lineWidth/2.0;
+
+	var centerLine = 0.5*(gameCanvas.height + tb - bb) + this.centerLineOffset;
+	var centerLineRatio = (centerLine - (tb - 0.5))/(gameCanvas.height - bb - tb);
+
+	// stroke gradient
+	var gStroke = gameCtx.createLinearGradient(0.5*(gameCanvas.width + this.lb - this.rb), tb - 0.5,
+		0.5*(gameCanvas.width + this.lb - this.rb), gameCanvas.height - (bb - 0.5));
+	gStroke.addColorStop(0,'rgba(255,255,0,' + f + ')');
+	gStroke.addColorStop(centerLineRatio, 'rgba(192,192,176,' + f + ')');
+	gStroke.addColorStop(1,'rgba(255,255,0,' + f + ')');
+	// fill gradient
+	var gFill = gameCtx.createLinearGradient(0.5*(gameCanvas.width + this.lb - this.rb), tb - 0.5,
+		0.5*(gameCanvas.width + this.lb - this.rb), gameCanvas.height - (bb - 0.5));
+	gFill.addColorStop(0,'rgba(255,255,0,' + f*0.5 + ')');
+	gFill.addColorStop(centerLineRatio, 'rgba(192,192,176,' + f*0.5 + ')');
+	gFill.addColorStop(1,'rgba(255,255,0,' + f*0.5 + ')');
+	return {
+		stroke: gStroke,
+		fill: gFill
+	}
+}
+
 /**************************************************************************************************************\
 ██████╗ ██████╗  █████╗ ██╗    ██╗     ██████╗  █████╗ ███╗   ███╗███████╗    ██╗    ██╗ █████╗ ██╗     ██╗     
 ██╔══██╗██╔══██╗██╔══██╗██║    ██║    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝    ██║    ██║██╔══██╗██║     ██║     
@@ -1037,6 +1070,7 @@ levelScreen.drawGameWallRounded = function (gStroke, gFill) {
 
 	// wall dimensions
 	var vMiddle = 0.5*(gameCanvas.height + tb - bb);
+	var centerLine = vMiddle + this.centerLineOffset;
 	var top = tb;
 	var bottom = gameCanvas.height - bb;
 	var left = lb;
@@ -1068,8 +1102,8 @@ levelScreen.drawGameWallRounded = function (gStroke, gFill) {
 
 	// middle line
 	gameCtx.beginPath();
-	gameCtx.moveTo(left, vMiddle);
-	gameCtx.lineTo(right, vMiddle);
+	gameCtx.moveTo(left, centerLine);
+	gameCtx.lineTo(right, centerLine);
 	gameCtx.stroke();
 
 	// bottom line
@@ -1121,6 +1155,7 @@ levelScreen.drawGameWallClipped = function (gStroke, gFill) {
 
 	// wall dimensions
 	var vMiddle = 0.5*(gameCanvas.height + tb - bb);
+	var centerLine = vMiddle + this.centerLineOffset;
 	var top = tb;
 	var bottom = gameCanvas.height - bb;
 	var left = lb;
@@ -1148,8 +1183,8 @@ levelScreen.drawGameWallClipped = function (gStroke, gFill) {
 
 	// middle line
 	gameCtx.beginPath();
-	gameCtx.moveTo(left, vMiddle);
-	gameCtx.lineTo(right, vMiddle);
+	gameCtx.moveTo(left, centerLine);
+	gameCtx.lineTo(right, centerLine);
 	gameCtx.stroke();
 
 	// bottom line
@@ -1215,8 +1250,8 @@ levelScreen.initWallsRounded = function () {
 	var wallG = new Wall(goalLeft, gameCanvas.height - this.bb, goalRight, gameCanvas.height - this.bb);
 	wallG.passable = {CueBall: true};
 	// middle line (ball can pass, paddle cannot)
-	var wallS = new Wall(this.lb, 0.5*(gameCanvas.height + this.tb - this.bb),
-		gameCanvas.width - this.rb, 0.5*(gameCanvas.height + this.tb - this.bb));
+	var wallS = new Wall(this.lb, 0.5*(gameCanvas.height + this.tb - this.bb) + this.centerLineOffset,
+		gameCanvas.width - this.rb, 0.5*(gameCanvas.height + this.tb - this.bb) + this.centerLineOffset);
 	wallS.passable = {CueBall: true};
 	// circular corners
 	// top left corner
@@ -1284,8 +1319,8 @@ levelScreen.initWallsClipped = function () {
 	var wallG = new Wall(goalLeft, gameCanvas.height - this.bb, goalRight, gameCanvas.height - this.bb);
 	wallG.passable = {CueBall: true};
 	// middle line (ball can pass, paddle cannot)
-	var wallS = new Wall(this.lb, 0.5*(gameCanvas.height + this.tb - this.bb),
-		gameCanvas.width - this.rb, 0.5*(gameCanvas.height + this.tb - this.bb));
+	var wallS = new Wall(this.lb, 0.5*(gameCanvas.height + this.tb - this.bb) + this.centerLineOffset,
+		gameCanvas.width - this.rb, 0.5*(gameCanvas.height + this.tb - this.bb) + this.centerLineOffset);
 	wallS.passable = {CueBall: true};
 	// clipped corners
 	var wallTL = new Wall(this.lb, this.tb + this.cornerRadius, this.lb + this.cornerRadius, this.tb);
@@ -1352,6 +1387,63 @@ levelScreen.initBricks2 = function () {
 		}
 	}
 };
+
+levelScreen.initBricks3 = function () {
+	var bigBrickSize = (gameCanvas.width - 132.0)/7.0;
+	var middleBrickSize = (bigBrickSize - 4.0)/2.0;
+	var smallBrickSize = (middleBrickSize - 4.0)/2.0;
+	for (var i = 0; i < 7; i++) {
+		var brick = new HealingBrick(54 + i*(4 + bigBrickSize),
+									 54 + (3 - Math.abs(i - 3))*(4 + bigBrickSize),
+									 bigBrickSize,
+									 bigBrickSize,
+									 16000000);
+		brick.fillR = 96;
+		brick.fillG = 96;
+		brick.fillB = 16;
+		brick.strokeR = 192;
+		brick.strokeG = 192;
+		brick.strokeB = 32;
+		brick.frequency = 40*C1;
+		this.bricks.push(brick);
+		if (i !== 0 && i !== 6) for (j = 0; j < 2; j++) {
+			for (k = 0; k < 2; k++) {
+				if ((i == 1 && j == 1 && k == 1) || (i == 2 && j == 1 && k == 1) || (i == 4 && j == 0 && k == 1) || (i == 5 && j == 0 && k == 1)) continue;
+				var middleBrick = new HealingBrick(54 + i*(4 + bigBrickSize) + j*(4 + middleBrickSize),
+												   54 + (3 - Math.abs(i - 3))*(4 + bigBrickSize) - (k + 1)*(4 + middleBrickSize),
+												   middleBrickSize,
+												   middleBrickSize,
+												   8000000);
+				middleBrick.fillR = 80;
+				middleBrick.fillG = 80;
+				middleBrick.fillB = 80;
+				middleBrick.strokeR = 160;
+				middleBrick.strokeG = 160;
+				middleBrick.strokeB = 160;
+				this.bricks.push(middleBrick);
+			}
+		}
+	}
+	var smallBrickPositions = [
+		[6, 0], [6, 1], [7, 1], [8, 2], [8, 3], [9, 3], [10, 4], [10, 5], [11, 5], [12, 6], [12, 7], [13, 7],
+		[14, 7], [15, 7], [15, 6], [16, 5], [17, 5], [17, 4], [18, 3], [19, 3], [19, 2], [20, 1], [21, 1], [21, 0]
+	];
+	for (var l = 0; l < smallBrickPositions.length; l++) {
+		var smallBrick = new HealingBrick(54 + smallBrickPositions[l][0]*(4 + smallBrickSize),
+										  54 + smallBrickPositions[l][1]*(4 + smallBrickSize),
+										  smallBrickSize,
+										  smallBrickSize,
+										  4000000);
+		smallBrick.fillR = 92;
+		smallBrick.fillG = 57;
+		smallBrick.fillB = 25;
+		smallBrick.strokeR = 184;
+		smallBrick.strokeG = 114;
+		smallBrick.strokeB = 50;
+		smallBrick.frequency = 72*C1;
+		this.bricks.push(smallBrick);
+	}
+}
 
 /***************************************************************************\
 ██╗███╗   ██╗██╗████████╗    ██████╗  █████╗ ██████╗ ██████╗ ██╗     ███████╗
@@ -1754,7 +1846,14 @@ collisions = {
 			ball.vy += 2*collData.vnf*collData.u.y;
 			var dp = 2*collData.vnf*ball.mass  // change in momentum of ball
 			brick.damage(dp);
-			brick.dying ? soundBank.brickDestroy(dp/100000000.0, brick.frequency) : soundBank.brickClunk(dp/100000000.0, brick.frequency)
+			if (brick.type == 'SimpleBrick') {
+				brick.dying ? soundBank.brickDestroy(dp/100000000.0, brick.frequency) : soundBank.brickClunk(dp/100000000.0, brick.frequency);
+			} else if (brick.type == 'HealingBrick') {
+				brick.dying ? soundBank.healingDestroy(dp/100000000.0, brick.frequency) : soundBank.healingClunk(dp/100000000.0, brick.frequency);
+			}
+		},
+		HealingBrick: function (ball, brick) {
+			collisions['CueBall']['SimpleBrick'](ball, brick);
 		},
 		ArcWall: function (ball, arc) {
 			collisions['ArcWall']['CueBall'](arc, ball);
@@ -1762,7 +1861,7 @@ collisions = {
 	},
 	SimpleBrick: {
 		CueBall: function (brick, ball) {
-			collisions['CueBall']['SimpleBrick'];
+			collisions['CueBall']['SimpleBrick'](ball, brick);
 		}
 	},
 	ArcWall: {
@@ -1796,7 +1895,12 @@ collisions = {
 				paddle.vy += collData.vnf*collData.u.y;
 			}
 		}
-	}
+	},
+	HealingBrick: {
+		CueBall: function (brick, ball) {
+			collisions['CueBall']['SimpleBrick'](ball, brick);
+		}
+	},
 };
 
 function ballBallCollision(ball1, ball2) {
@@ -2294,7 +2398,7 @@ GameObject.prototype.death = function () {};
 function Wall(x1, y1, x2, y2) {
 	// basics
 	this.type = "Wall";
-	this.open = true; // no collisions on the endpoints
+	this.open = false; // set to true for no collisions on the endpoints
 	
 	// definition
 	if (x1 < x2 || (x1 == x2 && y1 < y2)) {
@@ -2335,7 +2439,7 @@ Wall.prototype = new GameObject();
 function ArcWall(x, y, radius, t1, t2, cc) {
 	// basics
 	this.type = "ArcWall";
-	this.open = true; // no collisions on the endpoints
+	this.open = false; // set to true for no collisions on the endpoints
 	
 	// definition
 	this.x = x;
@@ -2911,6 +3015,131 @@ SimpleBrick.prototype.damage = function (dam) {
 	}
 }
 
+/*******************************************************************************************\
+██╗  ██╗███████╗ █████╗ ██╗     ██╗███╗   ██╗ ██████╗     ██████╗ ██████╗ ██╗ ██████╗██╗  ██╗
+██║  ██║██╔════╝██╔══██╗██║     ██║████╗  ██║██╔════╝     ██╔══██╗██╔══██╗██║██╔════╝██║ ██╔╝
+███████║█████╗  ███████║██║     ██║██╔██╗ ██║██║  ███╗    ██████╔╝██████╔╝██║██║     █████╔╝ 
+██╔══██║██╔══╝  ██╔══██║██║     ██║██║╚██╗██║██║   ██║    ██╔══██╗██╔══██╗██║██║     ██╔═██╗ 
+██║  ██║███████╗██║  ██║███████╗██║██║ ╚████║╚██████╔╝    ██████╔╝██║  ██║██║╚██████╗██║  ██╗
+╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚═╝╚═╝  ╚═══╝ ╚═════╝     ╚═════╝ ╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝
+\*******************************************************************************************/
+
+function HealingBrick(x, y, w, h, HP) {
+	// basics
+	this.type = 'HealingBrick';
+	this.locked = false;
+	
+	// definition
+	this.tl = {x: x, y: y};
+	this.tr = {x: x + w, y: y};
+	this.br = {x: x + w, y: y + h};
+	this.bl = {x: x, y: y + h};
+	this.center = {x: x + 0.5*w, y: y + 0.5*h};
+	this.w = w;
+	this.h = h;
+	this.vx = 0;
+	this.vy = 0;
+	this.area = w*h;
+	this.radius = distance(this.center.x, this.center.y, this.tl.x, this.tl.y);
+	
+	// drawing
+	this.fillR = 140;
+	this.fillG = 32;
+	this.fillB = 32;
+	this.fillA = 1.0;
+	this.strokeR = 255;
+	this.strokeG = 64;
+	this.strokeB = 64;
+	this.strokeA = 1.0;
+	this.lineWidth = 2;
+	
+	// animation
+	this.hitTime = this.area/3000.0;
+	this.totalHitFrames = (this.hitTime*1000)/globalOptions.mspf;
+	this.hitFrame = this.totalHitFrames;
+	this.dying = false;
+	this.deathTime = this.area/36000.0;
+	this.totalDeathFrames = (this.deathTime*1000)/globalOptions.mspf;
+	this.deathFrame = 0;
+
+	// sound
+	this.frequency = 48*C1;
+	
+	// game
+	this.maxHP = HP;
+	this.HP = HP;
+	this.fullHealTime = 20000; // in ms
+	this.healingRate = this.maxHP*globalOptions.mspf/this.fullHealTime;
+}
+HealingBrick.prototype = new GameObject();
+
+HealingBrick.prototype.update = function () {
+	if (this.locked) return;
+	GameObject.prototype.update.call(this);
+	if (this.hitFrame < this.totalHitFrames) this.hitFrame++;
+	if (this.HP <= 0) {
+		this.dying = true;
+		this.HP = 0;
+	} else if (this.HP < this.maxHP) {
+		this.HP += this.healingRate;
+		if (this.HP > this.maxHP) this.HP = this.maxHP;
+	}
+	if (this.dying) {
+		this.deathFrame++;
+		if (this.deathFrame >= this.totalDeathFrames) this.remove = true;
+	}
+	this.fillA = (this.hitFrame/this.totalHitFrames) * (this.HP/this.maxHP);
+	this.strokeA = (1 - (this.deathFrame/this.totalDeathFrames));
+}
+
+HealingBrick.prototype.draw = function (f) {
+	if (f === undefined) f = 1;
+
+	var b = Math.min(this.h, this.w); // center box side
+	var shine = gameCtx.createLinearGradient(this.tl.x + 0.5*(this.w - b), this.tl.y + 0.5*(this.h - b), this.tl.x + 0.5*(this.w + b), this.tl.y + 0.5*(this.h + b));
+	shine.addColorStop(0, rgba(255, 255, 255, 0));
+	shine.addColorStop(0.5, rgba(255, 255, 255, 0.5*f*this.fillA));
+	shine.addColorStop(1, rgba(255, 255, 255, 0));
+
+	GameObject.prototype.draw.call(this);
+	gameCtx.lineWidth = this.lineWidth;
+	gameCtx.fillStyle = rgba(this.fillR,this.fillG,this.fillB,this.fillA*f);
+	gameCtx.strokeStyle = rgba(this.strokeR,this.strokeG,this.strokeB,this.strokeA*f);
+	gameCtx.fillRect(this.tl.x, this.tl.y, this.w, this.h);
+	gameCtx.strokeRect(this.tl.x, this.tl.y, this.w, this.h);
+
+	var circleRadius = 0.37*b;
+	var centerx = 0.5*(this.tl.x + this.br.x);
+	var centery = 0.5*(this.tl.y + this.br.y);
+	
+	// circle
+	gameCtx.lineWidth = b/23.0;
+	gameCtx.beginPath();
+	gameCtx.arc(centerx, centery, circleRadius, 0, 2*Math.PI, true);
+	gameCtx.stroke();
+	// plus sign
+	gameCtx.lineWidth = b/9.0;
+	gameCtx.beginPath();
+	gameCtx.moveTo(centerx - 0.67*circleRadius, centery);
+	gameCtx.lineTo(centerx + 0.67*circleRadius, centery);
+	gameCtx.moveTo(centerx, centery - 0.67*circleRadius);
+	gameCtx.lineTo(centerx, centery + 0.67*circleRadius);
+	gameCtx.stroke();
+
+	gameCtx.fillStyle = shine;
+	gameCtx.fillRect(this.tl.x, this.tl.y, this.w, this.h);
+}
+
+HealingBrick.prototype.damage = function (dam) {
+	this.HP -= dam;
+	this.hitFrame = ((2.0*this.HP/3.0)/this.maxHP)*this.totalHitFrames;
+	if (this.hitFrame < 0) this.hitFrame = 0;
+	if (this.HP < 0) {
+		this.HP = 0;
+		this.dying = true;
+	}
+}
+
 /****************************************************************************************\
  █████╗ ██╗   ██╗██████╗ ██╗ ██████╗     ██████╗ ██╗      █████╗ ██╗   ██╗███████╗██████╗ 
 ██╔══██╗██║   ██║██╔══██╗██║██╔═══██╗    ██╔══██╗██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗
@@ -3112,6 +3341,24 @@ soundBank = {
 		sound2.envelope.release = 200;
 		sound1.play();
 		sound2.play();
+	},
+	'healingClunk': function (p, freq) {
+		var sound = new Tone(freq, 100, p);
+		sound.setFormula('triangle');
+		sound.envelope.attackGain = 4.0;
+		sound.envelope.attack = 5;
+		sound.envelope.decay = 45;
+		sound.envelope.release = 50;
+		sound.play();
+	},
+	'healingDestroy': function (p, freq) {
+		var sound = new Tone(freq, 100, p);
+		sound.setFormula('triangle');
+		sound.envelope.attackGain = 4.0;
+		sound.envelope.attack = 5;
+		sound.envelope.decay = 45;
+		sound.envelope.release = 400;
+		sound.play();
 	}
 };
 
