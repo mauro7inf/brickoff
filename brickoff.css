@@ -33,9 +33,14 @@ a:active {
 
 div.q {
 	text-align: left;
-	border: 2px solid #4040FF;
+	border: 1px solid #4040FF;
 	margin-top: 8px;
 	margin-bottom: 8px;
+}
+
+div.qq {
+	border: 1px solid #4040FF;
+	margin: 3px;
 	padding-left: 16px;
 	padding-right: 16px;
 }

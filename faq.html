@@ -3,7 +3,7 @@
 <html>
 	<head>
 		<meta charset="utf-8" />
-		<title>Synth FAQ</title>
+		<title>Brickoff FAQ</title>
 		<link rel="icon" href="../synth/favicon.ico" type="image/x-icon" />
 		<link href="brickoff.css" rel="stylesheet" type="text/css" />
 	</head>
@@ -11,29 +11,37 @@
 		<div id="whole">
 			<h1>FAQ</h1>
 			
-			<div class="q"><h3>What is Brickoff and how do I play it?</h3>
+			<div class="q"><div class="qq"><h3>What is Brickoff and how do I play it?</h3>
 			
-			<p>Brickoff is a game I'm working on.  It's not done yet.  It's also a music project.  If it ends after only a few levels, that's because I haven't written more levels yet.  Hold on.</p></div>
+			<p>Brickoff is a game I'm working on.  It's not done yet.  It's also a music project.  If it ends after only a few levels, that's because I haven't written more levels yet.  Hold on.</p></div></div>
 			
-			<div class="q"><h3>Tell me about the game.</h3>
+			<div class="q"><div class="qq"><h3>Tell me about the game.</h3>
 			
-			<p>It's a cross between the classic Brickout-type games we're used to playing -- Brickles, DX-Ball, that kind of thing -- and the physics of air hockey.  Usually, the Brickout clones involve a rectangular paddle, which can move only side to side, and a ball, and the ball's direction depends on where it hits on the paddle.  If the ball falls to the bottom of the screen, the player loses a life.  The goal is to clear the screen of bricks by hitting them with the ball.  I figured I could make a similar game using more realistic physics.  If you've played these Brickout clones, you'll notice that this paddle can move in any direction and hit the ball in any direction.  You can even lift the paddle up by pressing the mouse button and put it back down by letting go, which can capture the ball!  Be careful, though, because the grip isn't totally tight!  You can press p at any time to pause.</p></div>
+			<p>It's a cross between the classic Brickout-type games we're used to playing -- Brickles, DX-Ball, that kind of thing -- and the physics of air hockey.  Usually, the Brickout clones involve a rectangular paddle, which can move only side to side, and a ball, and the ball's direction depends on where it hits on the paddle.  If the ball falls to the bottom of the screen, the player loses a life.  The goal is to clear the screen of bricks by hitting them with the ball.  I figured I could make a similar game using more realistic physics.  If you've played these Brickout clones, you'll notice that this paddle can move in any direction and hit the ball in any direction.  You can even lift the paddle up by pressing the mouse button and put it back down by letting go, which can capture the ball!  Be careful, though, because the grip isn't totally tight!  You can press p at any time to pause.</p></div></div>
 			
-			<div class="q"><h3>How did you make the physics?</h3>
+			<div class="q"><div class="qq"><h3>How did you make the physics?</h3>
 			
-			<p>This game is more of a learning project for me, so I made the physics from scratch.  You know, conservation of energy and momentum.  The title screen came first so that I could develop the physics.  There are still some difficult bits left undone, like rotation, inelastic collisions, that sort of thing.</p></div>
+			<p>This game is more of a learning project for me, so I made the physics from scratch.  You know, conservation of energy and momentum.  The title screen came first so that I could develop the physics.  There are still some difficult bits left undone, like rotation, inelastic collisions, that sort of thing.</p></div></div>
 
-			<div class="q"><h3>Where did you get the sounds?  And you mentioned a music project?</h3>
+			<div class="q"><div class="qq"><h3>Where did you get the sounds?  And you mentioned a music project?</h3>
 			
-			<p>JavaScript has a WebAudio API.  All the sounds are dynamically generated from scratch by creating the waveforms, envelopes, etc.  I've had to learn quite a bit about how to do audio synthesis!  I've also made all of the sound effects notes in the C1 harmonic scale.  That strange note in the second level, for example, is an 11th harmonic.  When the game is finished, my plan is to do something interesting with it -- see the clue in the name of the first level.</p></div>
+			<p>JavaScript has a Web Audio API.  All the sounds are dynamically generated from scratch by creating the waveforms, envelopes, etc.  I've had to learn quite a bit about how to do audio synthesis!  I've also made all of the sound effects notes in the C1 harmonic scale.  That strange note in the second level, for example, is an 11th harmonic.  When the game is finished, my plan is to do something interesting with it -- see the clue in the name of the first level.</p></div></div>
 			
-			<div class="q"><h3>The graphics are really terrible.  The colors are even worse!</h3>
+			<div class="q"><div class="qq"><h3>The graphics are really terrible.  The colors are even worse!</h3>
 			
-			<p>We call this "programmer art".  My wife hates the colors.  I like them.  Sorry.</p></div>
+			<p>We call this "programmer art".  My wife hates the colors.  I like them.  Sorry.</p></div></div>
+
+			<div class="q"><div class="qq"><h3>Doesn't work.</h3>
 			
-			<div class="q"><h3>OH MY DEITIES YOU ROCK SO HARD HOW CAN I REACH YOU TO THANK YOU?  Or, I want to tell you how terrible a person you are; how can I point this out to you?</h3>
+			<p>It should work on Chrome and Safari at least, and probably Firefox.  IE lacks the Web Audio API entirely, so it simply won't work on IE.  Opera...  I'll let you figure that one out.  The game can't work with mobile at all since necessarily involves the mouse.</p></div></div>
+
+			<div class="q"><div class="qq"><h3>Stuff keeps getting cut off!</h3>
 			
-			<p>If you have comments, questions, scale requests, anything of the sort, please feel free to <a href="mailto:webmaster@offtonic.com">email me at webmaster@offtonic.com!</a></p></div>
+			<p>If your monitor or your resolution is too small, the large 800x800 canvas of Brickoff won't fit in your browser window.  Well, not to worry -- you can change the zoom in your browser and make the whole thing bigger or smaller!  Check your browser for how to do that, but if you have a trackpad, you can usually pinch to change the zoom.</p></div></div>
+			
+			<div class="q"><div class="qq"><h3>OH MY DEITIES YOU ROCK SO HARD HOW CAN I REACH YOU TO THANK YOU?  Or, I want to tell you how terrible a person you are; how can I point this out to you?</h3>
+			
+			<p>If you have comments, questions, scale requests, anything of the sort, please feel free to <a href="mailto:webmaster@offtonic.com">email me at webmaster@offtonic.com!</a></p></div></div>
 			<a href="index.html">Back</a>
 		</div>
 	</body>
