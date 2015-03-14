@@ -33,7 +33,7 @@
 var debug = false;
 var gameCanvas;
 var gameCtx;
-var audioCtx = new AudioContext();
+var audioCtx = window.AudioContext ? new AudioContext() : new webkitAudioContext;
 var audioPlayer;
 var soundBank;
 var titleScreen;
