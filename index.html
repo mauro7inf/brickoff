@@ -315,7 +315,7 @@ titleScreen.update = function () { // update the title screen
 		this.fadeInParameter = 1.0;
 		if (!this.paddle) this.initPaddle();
 		if (!this.clickToStartBlinker) this.initClickToStartBlinker();
-		if (this.purpleBallCount < this.numPurpleBalls) this.generatePurpleBall();
+		if (this.purpleBallCount < this.numPurpleBalls && this.titleOutFader.mode == 'inactive') this.generatePurpleBall();
 	}
 	if (this.titleOutFader.mode == 'active') {
 		this.titleOutFader.update();
@@ -1392,45 +1392,50 @@ levelScreen.initBricks3 = function () {
 	var bigBrickSize = (gameCanvas.width - 132.0)/7.0;
 	var middleBrickSize = (bigBrickSize - 4.0)/2.0;
 	var smallBrickSize = (middleBrickSize - 4.0)/2.0;
-	for (var i = 0; i < 7; i++) {
-		var brick = new HealingBrick(54 + i*(4 + bigBrickSize),
-									 54 + (3 - Math.abs(i - 3))*(4 + bigBrickSize),
-									 bigBrickSize,
-									 bigBrickSize,
-									 16000000);
-		brick.fillR = 96;
-		brick.fillG = 96;
-		brick.fillB = 16;
-		brick.strokeR = 192;
-		brick.strokeG = 192;
-		brick.strokeB = 32;
-		brick.frequency = 40*C1;
-		this.bricks.push(brick);
-		if (i !== 0 && i !== 6) for (j = 0; j < 2; j++) {
-			for (k = 0; k < 2; k++) {
-				if ((i == 1 && j == 1 && k == 1) || (i == 2 && j == 1 && k == 1) || (i == 4 && j == 0 && k == 1) || (i == 5 && j == 0 && k == 1)) continue;
-				var middleBrick = new HealingBrick(54 + i*(4 + bigBrickSize) + j*(4 + middleBrickSize),
-												   54 + (3 - Math.abs(i - 3))*(4 + bigBrickSize) - (k + 1)*(4 + middleBrickSize),
-												   middleBrickSize,
-												   middleBrickSize,
-												   8000000);
-				middleBrick.fillR = 80;
-				middleBrick.fillG = 80;
-				middleBrick.fillB = 80;
-				middleBrick.strokeR = 160;
-				middleBrick.strokeG = 160;
-				middleBrick.strokeB = 160;
-				this.bricks.push(middleBrick);
-			}
-		}
-	}
-	var smallBrickPositions = [
-		[6, 0], [6, 1], [7, 1], [8, 2], [8, 3], [9, 3], [10, 4], [10, 5], [11, 5], [12, 6], [12, 7], [13, 7],
-		[14, 7], [15, 7], [15, 6], [16, 5], [17, 5], [17, 4], [18, 3], [19, 3], [19, 2], [20, 1], [21, 1], [21, 0]
+	// positions of the top left corner in units of the small brick, whose side is 1/4 of the big one
+	var bigBrickPositions = [
+		[0, 0], [4, 4], [8, 8], [16, 8], [20, 4], [24, 0], [12, 0]
 	];
-	for (var l = 0; l < smallBrickPositions.length; l++) {
-		var smallBrick = new HealingBrick(54 + smallBrickPositions[l][0]*(4 + smallBrickSize),
-										  54 + smallBrickPositions[l][1]*(4 + smallBrickSize),
+	var middleBrickPositions = [
+		[4, 2], [2, 4], [8, 6], [6, 8], [12, 10], [10, 12], [14, 10], [16, 12], [18, 6], [20, 8], [22, 2], [24, 4], [10, 0], [13, 4], [16, 0]
+	];
+	var smallBrickPositions = [
+		[1, 4], [3, 6], [5, 8], [7, 10], [9, 12], [4, 1], [6, 3], [8, 5], [10, 7], [12, 9], [12, 12],
+		[26, 4], [24, 6], [22, 8], [20, 10], [18, 12], [23, 1], [21, 3], [19, 5], [17, 7], [15, 9], [15, 12],
+		[9, 0], [11, 2], [16, 2], [18, 0]
+	];
+	for (var i = 0; i < bigBrickPositions.length; i++) {
+		var bigBrick = new HealingBrick(54 + bigBrickPositions[i][0]*(4 + smallBrickSize),
+										54 + bigBrickPositions[i][1]*(4 + smallBrickSize),
+										bigBrickSize,
+										bigBrickSize,
+										16000000);
+		bigBrick.fillR = 96;
+		bigBrick.fillG = 96;
+		bigBrick.fillB = 16;
+		bigBrick.strokeR = 192;
+		bigBrick.strokeG = 192;
+		bigBrick.strokeB = 32;
+		bigBrick.frequency = 40*C1;
+		this.bricks.push(bigBrick);
+	}
+	for (var i = 0; i < middleBrickPositions.length; i++) {
+		var middleBrick = new HealingBrick(54 + middleBrickPositions[i][0]*(4 + smallBrickSize),
+										   54 + middleBrickPositions[i][1]*(4 + smallBrickSize),
+										   middleBrickSize,
+										   middleBrickSize,
+										   8000000);
+		middleBrick.fillR = 80;
+		middleBrick.fillG = 80;
+		middleBrick.fillB = 80;
+		middleBrick.strokeR = 160;
+		middleBrick.strokeG = 160;
+		middleBrick.strokeB = 160;
+		this.bricks.push(middleBrick);
+	}
+	for (var i = 0; i < smallBrickPositions.length; i++) {
+		var smallBrick = new HealingBrick(54 + smallBrickPositions[i][0]*(4 + smallBrickSize),
+										  54 + smallBrickPositions[i][1]*(4 + smallBrickSize),
 										  smallBrickSize,
 										  smallBrickSize,
 										  4000000);
@@ -3350,6 +3355,13 @@ soundBank = {
 		sound.envelope.decay = 45;
 		sound.envelope.release = 50;
 		sound.play();
+		var sound2 = new Tone(16*C1, 100, p/3);
+		sound2.setFormula('triangle');
+		sound2.envelope.attackGain = 4.0;
+		sound2.envelope.attack = 5;
+		sound2.envelope.decay = 45;
+		sound2.envelope.release = 100;
+		sound2.play();
 	},
 	'healingDestroy': function (p, freq) {
 		var sound = new Tone(freq, 100, p);
@@ -3359,6 +3371,13 @@ soundBank = {
 		sound.envelope.decay = 45;
 		sound.envelope.release = 400;
 		sound.play();
+		var sound2 = new Tone(16*C1, 100, p/3);
+		sound2.setFormula('triangle');
+		sound2.envelope.attackGain = 4.0;
+		sound2.envelope.attack = 5;
+		sound2.envelope.decay = 45;
+		sound2.envelope.release = 200;
+		sound2.play();
 	}
 };
 
