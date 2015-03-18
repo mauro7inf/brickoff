@@ -1368,6 +1368,7 @@ levelScreen.initBricks1 = function () {
 
 levelScreen.initBricks2 = function () {
 	for (var i = 0; i < 10; i++) {
+		if (i == 2 || i == 7) continue;
 		for (var j = 0; j < 6; j++) {
 			var brick = new SimpleBrick(54 + i*(4 + (gameCanvas.width - 144.0)/10.0),
 										150 + 24*j,
