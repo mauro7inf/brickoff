@@ -69,6 +69,7 @@ var C1 = 440.0/Math.pow(2, 45.0/12.0); // frequency of C1
 function load() { // initialization
 	gameCanvas = document.getElementById('game');
 	gameCtx = gameCanvas.getContext('2d');
+	gameCtx.miterLimit = 2;
 	titleScreen.initTitle();
 	document.addEventListener('mouseout', onMouseOut, false);
 	document.addEventListener('mousemove', onMouseMove, false);
@@ -172,6 +173,7 @@ function randomColor() {
 	var h = Math.random()*6;
 	var s = Math.pow(Math.random(), 1.0/2.0);
 	var v = Math.pow(Math.random(), 1.0/3.0);
+	while (v <= 0.2) v = Math.pow(Math.random(), 1.0/3.0); // let's not make it too dark
 	var c = s*v;
 	var color = {
 		r: 0,
@@ -593,6 +595,35 @@ levelScreen = {
 				g: 255,
 				b: 64
 			}
+		},
+		4: {
+			title: 'The Brick Road',
+			newLives: 1,
+			geometry: {
+				cornerRadius: 102,
+				tb: 50,
+				bb: 50,
+				lb: 50,
+				rb: 50,
+				goalWidth: 200,
+				goalRadius: 50,
+				centerLineOffset: 0
+			},
+			initWalls: 'initWallsClipped',
+			initBricks: 'initBricks4',
+			initPaddleAndBall: 'initPaddleAndBallA',
+			drawGameWall: 'drawGameWallClipped',
+			gradients: 'gradientsD',
+			outlineFill: {
+				r: 15,
+				g: 30,
+				b: 0
+			},
+			outlineStroke: {
+				r: 160,
+				g: 255,
+				b: 64
+			}
 		}
 	}
 };
@@ -646,7 +677,7 @@ levelScreen.levelStart = function () {
 };
 
 levelScreen.nextLevel = function () {
-	if (this.level >= 3) { // max level; put this variable elsewhere
+	if (this.level >= 4) { // max level; put this variable elsewhere
 		gameState.level = false;
 		endingScreen.gameWon();
 	} else {
@@ -1045,6 +1076,33 @@ levelScreen.gradientsC = function (f) {
 	}
 }
 
+levelScreen.gradientsD = function (f) {
+	gameCtx.lineWidth = 2;
+
+	// width of border between game wall and canvas wall
+	var tb = this.tb - gameCtx.lineWidth/2.0;
+	var bb = this.bb - gameCtx.lineWidth/2.0;
+	var lb = this.lb - gameCtx.lineWidth/2.0;
+	var rb = this.rb - gameCtx.lineWidth/2.0;
+
+	// stroke gradient
+	var gStroke = gameCtx.createLinearGradient(0.5*(gameCanvas.width + this.lb - this.rb), tb - 0.5,
+		0.5*(gameCanvas.width + this.lb - this.rb), gameCanvas.height - (bb - 0.5));
+	gStroke.addColorStop(0,'rgba(255,255,64,' + f + ')');
+	gStroke.addColorStop(0.5, 'rgba(160,255,64,' + f + ')');
+	gStroke.addColorStop(1,'rgba(64,255,160,' + f + ')');
+	// fill gradient
+	var gFill = gameCtx.createLinearGradient(0.5*(gameCanvas.width + this.lb - this.rb), tb - 0.5,
+		0.5*(gameCanvas.width + this.lb - this.rb), gameCanvas.height - (bb - 0.5));
+	gFill.addColorStop(0,'rgba(255,255,64,' + f*0.5 + ')');
+	gFill.addColorStop(0.5, 'rgba(160,255,64,' + f*0.5 + ')');
+	gFill.addColorStop(1,'rgba(64,255,160,' + f*0.5 + ')');
+	return {
+		stroke: gStroke,
+		fill: gFill
+	}
+}
+
 /**************************************************************************************************************\
 ██████╗ ██████╗  █████╗ ██╗    ██╗     ██████╗  █████╗ ███╗   ███╗███████╗    ██╗    ██╗ █████╗ ██╗     ██╗     
 ██╔══██╗██╔══██╗██╔══██╗██║    ██║    ██╔════╝ ██╔══██╗████╗ ████║██╔════╝    ██║    ██║██╔══██╗██║     ██║     
@@ -1422,10 +1480,10 @@ levelScreen.initBricks3 = function () {
 	}
 	for (var i = 0; i < middleBrickPositions.length; i++) {
 		var middleBrick = new HealingBrick(54 + middleBrickPositions[i][0]*(4 + smallBrickSize),
-										   54 + middleBrickPositions[i][1]*(4 + smallBrickSize),
-										   middleBrickSize,
-										   middleBrickSize,
-										   8000000);
+											54 + middleBrickPositions[i][1]*(4 + smallBrickSize),
+											middleBrickSize,
+											middleBrickSize,
+											8000000);
 		middleBrick.fillR = 80;
 		middleBrick.fillG = 80;
 		middleBrick.fillB = 80;
@@ -1436,10 +1494,10 @@ levelScreen.initBricks3 = function () {
 	}
 	for (var i = 0; i < smallBrickPositions.length; i++) {
 		var smallBrick = new HealingBrick(54 + smallBrickPositions[i][0]*(4 + smallBrickSize),
-										  54 + smallBrickPositions[i][1]*(4 + smallBrickSize),
-										  smallBrickSize,
-										  smallBrickSize,
-										  4000000);
+											54 + smallBrickPositions[i][1]*(4 + smallBrickSize),
+											smallBrickSize,
+											smallBrickSize,
+											4000000);
 		smallBrick.fillR = 92;
 		smallBrick.fillG = 57;
 		smallBrick.fillB = 25;
@@ -1450,6 +1508,697 @@ levelScreen.initBricks3 = function () {
 		this.bricks.push(smallBrick);
 	}
 }
+
+
+levelScreen.initBricks4 = function () {
+	var self = this;
+	var gs = 692/28.0; // grid size
+	var bs = 2*Math.sqrt(2); // brick spacing; it's actually twice this, but this is the distance from the grid lines
+	var ls = 2; // linear brick spacing
+
+	function createPolygonBrick(vertices) {
+		var correctedVertices = [];
+		var nv = vertices.length;
+		for (var i = 0; i < nv; i++) {
+			var prevVector = {
+				x: vertices[(i + nv - 1) % nv].x - vertices[i].x,
+				y: vertices[(i + nv - 1) % nv].y - vertices[i].y
+			};
+			var dpv = distance(0, 0, prevVector.x, prevVector.y);
+			var nextVector = {
+				x: vertices[(i + 1) % nv].x - vertices[i].x,
+				y: vertices[(i + 1) % nv].y - vertices[i].y
+			};
+			var dnv = distance(0, 0, nextVector.x, nextVector.y);
+			var resVector = {
+				x: prevVector.x/dpv + nextVector.x/dnv,
+				y: prevVector.y/dpv + nextVector.y/dnv
+			};
+			var drv = distance(0, 0, resVector.x, resVector.y); // this will cause an error if three consecutive vertices are collinear
+			var u = {
+				x: resVector.x/drv,
+				y: resVector.y/drv
+			};
+			var correctedVertex = {
+				x: vertices[i].x*gs + self.lb + 4,
+				y: vertices[i].y*gs + self.tb + 4
+			};
+			if (vertices[i].hasOwnProperty('e')) { // direction in which to nudge; default is angle bisector of brick angle there
+				if (vertices[i].e == 'leave'); // don't nudge
+				else if (vertices[i].e == 'l') {
+					correctedVertex.x -= ls;
+				} else if (vertices[i].e == 'd') {
+					correctedVertex.y += ls;
+				} else if (vertices[i].e == 'r') {
+					correctedVertex.x += ls;
+				} else if (vertices[i].e == 'u') {
+					correctedVertex.y -= ls;
+				} else if (vertices[i].e == 'dl' || vertices[i].e == 'ld') {
+					correctedVertex.x -= ls;
+					correctedVertex.y += ls;
+				} else if (vertices[i].e == 'ul' || vertices[i].e == 'lu') {
+					correctedVertex.x -= ls;
+					correctedVertex.y -= ls;
+				} else if (vertices[i].e == 'dr' || vertices[i].e == 'rd') {
+					correctedVertex.x += ls;
+					correctedVertex.y += ls;
+				} else if (vertices[i].e == 'ur' || vertices[i].e == 'ru') {
+					correctedVertex.x += ls;
+					correctedVertex.y -= ls;
+				}
+			} else {
+				correctedVertex.x += u.x*bs;
+				correctedVertex.y += u.y*bs;
+			}
+			correctedVertices.push(correctedVertex);
+		}
+		var brick = new PolygonBrick(correctedVertices, 6000);
+		var c = randomColor();
+		while (c.g < 156 || c.r < 64 || (c.r < 200 && c.g < 200 && c.b < 200) || c.r + c.g + c.b > 600) c = randomColor();
+		brick.fillR = Math.floor(c.r/2.0);
+		brick.fillG = Math.floor(c.g/2.0);
+		brick.fillB = Math.floor(c.b/2.0);
+		brick.strokeR = 2*brick.fillR;
+		brick.strokeG = 2*brick.fillG;
+		brick.strokeB = 2*brick.fillB;
+		var brickNotes = Math.floor(Math.random()*6.0);
+		if (brickNotes == 0) {
+			brick.frequency1 = 22*C1;
+			brick.frequency2 = 28*C1;
+		} else if (brickNotes == 1) {
+			brick.frequency1 = 24*C1;
+			brick.frequency2 = 30*C1;
+		} else if (brickNotes == 2) {
+			brick.frequency1 = 27*C1;
+			brick.frequency2 = 33*C1;
+		} else if (brickNotes == 3) {
+			brick.frequency1 = 28*C1;
+			brick.frequency2 = 36*C1;
+		} else if (brickNotes == 4) {
+			brick.frequency1 = 32*C1;
+			brick.frequency2 = 40*C1;
+		} else if (brickNotes == 5) {
+			brick.frequency1 = 35*C1;
+			brick.frequency2 = 44*C1;
+		} else if (brickNotes == 6) {
+			brick.frequency1 = 40*C1;
+			brick.frequency2 = 50*C1;
+		}
+		self.bricks.push(brick);
+	}
+
+	// 1
+	createPolygonBrick([
+		{x: 0, y: 12, e: 'leave'},
+		{x: 0, y: 10, e: 'd'},
+		{x: 2, y: 11},
+		{x: 3, y: 12, e: 'l'}
+	]);
+
+	// 2
+	createPolygonBrick([
+		{x: 0, y: 10, e: 'u'},
+		{x: 0, y: 9, e: 'd'},
+		{x: 1, y: 8},
+		{x: 2, y: 11}
+	]);
+
+	// 3
+	createPolygonBrick([
+		{x: 0, y: 9, e: 'u'},
+		{x: 0, y: 6, e: 'd'},
+		{x: 1, y: 7},
+		{x: 1, y: 8}
+	]);
+
+	// 4
+	createPolygonBrick([
+		{x: 0, y: 6, e: 'u'},
+		{x: 0, y: 4, e: 'leave'},
+		{x: 2, y: 2, e: 'dl'},
+		{x: 2, y: 4},
+		{x: 1, y: 7}
+	]);
+
+	// 5
+	createPolygonBrick([
+		{x: 2, y: 4},
+		{x: 2, y: 2, e: 'ur'},
+		{x: 3, y: 1, e: 'dl'},
+		{x: 4, y: 2},
+		{x: 4, y: 3}
+	]);
+
+	// 6
+	createPolygonBrick([
+		{x: 4, y: 2},
+		{x: 3, y: 1, e: 'ur'},
+		{x: 4, y: 0, e: 'leave'},
+		{x: 7, y: 0, e: 'l'},
+		{x: 6, y: 1}
+	]);
+
+	// 7
+	createPolygonBrick([
+		{x: 3, y: 12, e: 'r'},
+		{x: 2, y: 11},
+		{x: 4, y: 10},
+		{x: 4, y: 12, e: 'l'}
+	]);
+
+	// 8
+	createPolygonBrick([
+		{x: 2, y: 11},
+		{x: 1, y: 8},
+		{x: 2, y: 8},
+		{x: 4, y: 10}
+	]);
+
+	// 9
+	createPolygonBrick([
+		{x: 1, y: 8},
+		{x: 1, y: 7},
+		{x: 3, y: 6},
+		{x: 3, y: 7},
+		{x: 2, y: 8}
+	]);
+
+	// 10
+	createPolygonBrick([
+		{x: 1, y: 7},
+		{x: 2, y: 4},
+		{x: 3, y: 6}
+	]);
+
+	// 11
+	createPolygonBrick([
+		{x: 3, y: 6},
+		{x: 2, y: 4},
+		{x: 4, y: 3},
+		{x: 5, y: 3},
+		{x: 4, y: 5}
+	]);
+
+	// 12
+	createPolygonBrick([
+		{x: 4, y: 3},
+		{x: 4, y: 2},
+		{x: 6, y: 1},
+		{x: 6, y: 3}
+	]);
+
+	// 13
+	createPolygonBrick([
+		{x: 4, y: 10},
+		{x: 2, y: 8},
+		{x: 3, y: 7},
+		{x: 4, y: 9}
+	]);
+
+	// 14
+	createPolygonBrick([
+		{x: 4, y: 9},
+		{x: 3, y: 7},
+		{x: 3, y: 6},
+		{x: 4, y: 5},
+		{x: 5, y: 6}
+	]);
+
+	// 15
+	createPolygonBrick([
+		{x: 5, y: 6},
+		{x: 4, y: 5},
+		{x: 5, y: 3},
+		{x: 6, y: 5}
+	]);
+
+	// 16
+	createPolygonBrick([
+		{x: 6, y: 5},
+		{x: 5, y: 3},
+		{x: 7, y: 3},
+		{x: 7, y: 4}
+	]);
+
+	// 17
+	createPolygonBrick([
+		{x: 6, y: 3},
+		{x: 6, y: 1},
+		{x: 8, y: 2},
+		{x: 7, y: 3}
+	]);
+
+	// 18
+	createPolygonBrick([
+		{x: 6, y: 1},
+		{x: 7, y: 0, e: 'r'},
+		{x: 9, y: 0, e: 'l'},
+		{x: 9, y: 1},
+		{x: 8, y: 2}
+	]);
+
+	// 19
+	createPolygonBrick([
+		{x: 7, y: 4},
+		{x: 7, y: 3},
+		{x: 9, y: 1},
+		{x: 10, y: 2}
+	]);
+
+	// 20
+	createPolygonBrick([
+		{x: 9, y: 1},
+		{x: 9, y: 0, e: 'r'},
+		{x: 11, y: 0, e: 'l'},
+		{x: 10, y: 2}
+	]);
+
+	// 21
+	createPolygonBrick([
+		{x: 10, y: 2},
+		{x: 11, y: 0},
+		{x: 13, y: 1}
+	]);
+
+	// 22
+	createPolygonBrick([
+		{x: 13, y: 1},
+		{x: 11, y: 0, e: 'r'},
+		{x: 15, y: 0, e: 'l'},
+		{x: 14, y: 1}
+	]);
+
+	// 23
+	createPolygonBrick([
+		{x: 14, y: 1},
+		{x: 15, y: 0, e: 'r'},
+		{x: 17, y: 0, e: 'l'},
+		{x: 16, y: 1}
+	]);
+
+	// 24
+	createPolygonBrick([
+		{x: 16, y: 1},
+		{x: 17, y: 0, e: 'r'},
+		{x: 19, y: 0, e: 'l'},
+		{x: 18, y: 2}
+	]);
+
+	// 25
+	createPolygonBrick([
+		{x: 18, y: 2},
+		{x: 19, y: 0},
+		{x: 19, y: 2}
+	]);
+
+	// 26
+	createPolygonBrick([
+		{x: 19, y: 2},
+		{x: 19, y: 0, e: 'r'},
+		{x: 20, y: 0, e: 'l'},
+		{x: 21, y: 3}
+	]);
+
+	// 27
+	createPolygonBrick([
+		{x: 21, y: 3},
+		{x: 20, y: 0, e: 'r'},
+		{x: 21, y: 0, e: 'l'},
+		{x: 22, y: 1}
+	]);
+
+	// 28
+	createPolygonBrick([
+		{x: 22, y: 1},
+		{x: 21, y: 0, e: 'r'},
+		{x: 24, y: 0, e: 'leave'},
+		{x: 25, y: 1, e: 'ul'},
+		{x: 24, y: 2}
+	]);
+
+	// 29
+	createPolygonBrick([
+		{x: 20, y: 4},
+		{x: 18, y: 2},
+		{x: 19, y: 2},
+		{x: 21, y: 3}
+	]);
+
+	// 30
+	createPolygonBrick([
+		{x: 21, y: 6},
+		{x: 20, y: 4},
+		{x: 21, y: 3},
+		{x: 22, y: 4},
+		{x: 22, y: 5}
+	]);
+
+	// 31
+	createPolygonBrick([
+		{x: 21, y: 7},
+		{x: 21, y: 6},
+		{x: 22, y: 5},
+		{x: 23, y: 6},
+		{x: 23, y: 7}
+	]);
+
+	// 32
+	createPolygonBrick([
+		{x: 20, y: 9},
+		{x: 21, y: 7},
+		{x: 23, y: 7},
+		{x: 22, y: 9},
+		{x: 21, y: 10}
+	]);
+
+	// 33
+	createPolygonBrick([
+		{x: 21, y: 12},
+		{x: 19, y: 11},
+		{x: 18, y: 10},
+		{x: 20, y: 9},
+		{x: 21, y: 10}
+	]);
+
+	// 34
+	createPolygonBrick([
+		{x: 18, y: 12, e: 'r'},
+		{x: 19, y: 11},
+		{x: 21, y: 12, e: 'l'}
+	]);
+
+	// 35
+	createPolygonBrick([
+		{x: 17, y: 12, e: 'r'},
+		{x: 18, y: 10},
+		{x: 19, y: 11},
+		{x: 18, y: 12, e: 'l'}
+	]);
+
+	// 36
+	createPolygonBrick([
+		{x: 17, y: 12},
+		{x: 15, y: 11},
+		{x: 18, y: 10}
+	]);
+
+	// 37
+	createPolygonBrick([
+		{x: 13, y: 12, e: 'r'},
+		{x: 14, y: 11},
+		{x: 15, y: 11},
+		{x: 17, y: 12, e: 'l'}
+	]);
+
+	// 38
+	createPolygonBrick([
+		{x: 13, y: 12},
+		{x: 12, y: 10},
+		{x: 12, y: 9},
+		{x: 14, y: 11}
+	]);
+
+	// 39
+	createPolygonBrick([
+		{x: 12, y: 10},
+		{x: 11, y: 8},
+		{x: 12, y: 8}
+	]);
+
+	// 40
+	createPolygonBrick([
+		{x: 11, y: 8},
+		{x: 10, y: 7},
+		{x: 12, y: 6},
+		{x: 13, y: 6},
+		{x: 12, y: 8}
+	]);
+
+	// 41
+	createPolygonBrick([
+		{x: 12, y: 6},
+		{x: 13, y: 4},
+		{x: 15, y: 4},
+		{x: 15, y: 5},
+		{x: 13, y: 6}
+	]);
+
+	// 42
+	createPolygonBrick([
+		{x: 15, y: 5},
+		{x: 15, y: 4},
+		{x: 18, y: 6},
+		{x: 17, y: 6}
+	]);
+
+	// 43
+	createPolygonBrick([
+		{x: 16, y: 7},
+		{x: 15, y: 5},
+		{x: 17, y: 6}
+	]);
+
+	// 44
+	createPolygonBrick([
+		{x: 17, y: 8},
+		{x: 16, y: 7},
+		{x: 17, y: 6},
+		{x: 18, y: 6}
+	]);
+
+	// 45
+	createPolygonBrick([
+		{x: 15, y: 9},
+		{x: 16, y: 7},
+		{x: 17, y: 8}
+	]);
+
+	// 46
+	createPolygonBrick([
+		{x: 11, y: 12, e: 'r'},
+		{x: 11, y: 11},
+		{x: 12, y: 10},
+		{x: 13, y: 12, e: 'l'}
+	]);
+
+	// 47
+	createPolygonBrick([
+		{x: 11, y: 11},
+		{x: 11, y: 10},
+		{x: 12, y: 10}
+	]);
+
+	// 48
+	createPolygonBrick([
+		{x: 11, y: 10},
+		{x: 9, y: 9},
+		{x: 11, y: 8},
+		{x: 12, y: 10}
+	]);
+
+	// 49
+	createPolygonBrick([
+		{x: 9, y: 9},
+		{x: 8, y: 8},
+		{x: 9, y: 7},
+		{x: 10, y: 7},
+		{x: 11, y: 8}
+	]);
+
+	// 50
+	createPolygonBrick([
+		{x: 9, y: 7},
+		{x: 10, y: 6},
+		{x: 13, y: 4},
+		{x: 12, y: 6},
+		{x: 10, y: 7}
+	]);
+
+	// 51
+	createPolygonBrick([
+		{x: 11, y: 12},
+		{x: 10, y: 11},
+		{x: 11, y: 10}
+	]);
+
+	// 52
+	createPolygonBrick([
+		{x: 10, y: 11},
+		{x: 9, y: 10},
+		{x: 9, y: 9},
+		{x: 11, y: 10}
+	]);
+
+	// 53
+	createPolygonBrick([
+		{x: 8, y: 12, e: 'r'},
+		{x: 8, y: 11},
+		{x: 9, y: 10},
+		{x: 11, y: 12, e: 'l'}
+	]);
+
+	// 54
+	createPolygonBrick([
+		{x: 8, y: 11},
+		{x: 7, y: 10},
+		{x: 8, y: 8},
+		{x: 9, y: 9},
+		{x: 9, y: 10}
+	]);
+
+	// 55
+	createPolygonBrick([
+		{x: 8, y: 12, e: 'l'},
+		{x: 7, y: 10},
+		{x: 8, y: 11}
+	]);
+
+	// 56
+	createPolygonBrick([
+		{x: 21, y: 12, e: 'r'},
+		{x: 21, y: 11},
+		{x: 23, y: 10},
+		{x: 24, y: 12, e: 'l'}
+	]);
+
+	// 57
+	createPolygonBrick([
+		{x: 21, y: 11},
+		{x: 21, y: 10},
+		{x: 22, y: 9},
+		{x: 23, y: 10}
+	]);
+
+	// 58
+	createPolygonBrick([
+		{x: 23, y: 10},
+		{x: 22, y: 9},
+		{x: 23, y: 7},
+		{x: 25, y: 8},
+		{x: 25, y: 9},
+		{x: 24, y: 10}
+	]);
+
+	// 59
+	createPolygonBrick([
+		{x: 23, y: 7},
+		{x: 23, y: 6},
+		{x: 25, y: 5},
+		{x: 27, y: 6},
+		{x: 25, y: 8}
+	]);
+
+	// 60
+	createPolygonBrick([
+		{x: 23, y: 6},
+		{x: 22, y: 5},
+		{x: 22, y: 4},
+		{x: 24, y: 3},
+		{x: 25, y: 5}
+	]);
+
+	// 61
+	createPolygonBrick([
+		{x: 22, y: 4},
+		{x: 21, y: 3},
+		{x: 22, y: 1},
+		{x: 24, y: 2},
+		{x: 24, y: 3}
+	]);
+
+	// 62
+	createPolygonBrick([
+		{x: 24, y: 12, e: 'r'},
+		{x: 23, y: 10},
+		{x: 24, y: 10},
+		{x: 25, y: 11},
+		{x: 25, y: 12, e: 'l'}
+	]);
+
+	// 63
+	createPolygonBrick([
+		{x: 25, y: 11},
+		{x: 24, y: 10},
+		{x: 25, y: 9},
+		{x: 26, y: 11}
+	]);
+
+	// 64
+	createPolygonBrick([
+		{x: 26, y: 11},
+		{x: 25, y: 9},
+		{x: 25, y: 8},
+		{x: 26, y: 7},
+		{x: 27, y: 8},
+		{x: 27, y: 9}
+	]);
+
+	// 65
+	createPolygonBrick([
+		{x: 27, y: 8},
+		{x: 26, y: 7},
+		{x: 28, y: 5, e: 'd'},
+		{x: 28, y: 7, e: 'u'}
+	]);
+
+	// 66
+	createPolygonBrick([
+		{x: 27, y: 6},
+		{x: 25, y: 5},
+		{x: 28, y: 5}
+	]);
+
+	// 67
+	createPolygonBrick([
+		{x: 25, y: 5},
+		{x: 24, y: 3},
+		{x: 26, y: 4},
+		{x: 27, y: 5}
+	]);
+
+	// 68
+	createPolygonBrick([
+		{x: 27, y: 5},
+		{x: 26, y: 4},
+		{x: 26, y: 2, e: 'dr'},
+		{x: 28, y: 4, e: 'leave'},
+		{x: 28, y: 5, e: 'u'}
+	]);
+
+	// 69
+	createPolygonBrick([
+		{x: 24, y: 3},
+		{x: 24, y: 2},
+		{x: 25, y: 1, e: 'dr'},
+		{x: 26, y: 2, e: 'ul'},
+		{x: 26, y: 4}
+	]);
+
+	// 70
+	createPolygonBrick([
+		{x: 25, y: 12, e: 'r'},
+		{x: 25, y: 11},
+		{x: 26, y: 11},
+		{x: 27, y: 12, e: 'l'}
+	]);
+
+	// 71
+	createPolygonBrick([
+		{x: 27, y: 12, e: 'r'},
+		{x: 26, y: 11},
+		{x: 27, y: 9},
+		{x: 28, y: 10, e: 'd'},
+		{x: 28, y: 12, e: 'leave'}
+	]);
+
+	// 72
+	createPolygonBrick([
+		{x: 28, y: 10, e: 'u'},
+		{x: 27, y: 9},
+		{x: 27, y: 8},
+		{x: 28, y: 7, e: 'd'}
+	]);
+};
 
 /***************************************************************************\
 ██╗███╗   ██╗██╗████████╗    ██████╗  █████╗ ██████╗ ██████╗ ██╗     ███████╗
@@ -1863,6 +2612,12 @@ collisions = {
 		},
 		ArcWall: function (ball, arc) {
 			collisions['ArcWall']['CueBall'](arc, ball);
+		},
+		PolygonBrick: function (ball, brick) {
+			var collData = polygonBallCollision(brick, ball);
+			if (!collData) return;
+			brick.damage(collData.dp);
+			brick.dying ? soundBank.polygonDestroy(collData.dp/100000000.0, brick.frequency1, brick.frequency2) : soundBank.polygonClunk(collData.dp/100000000.0, brick.frequency1, brick.frequency2);
 		}
 	},
 	SimpleBrick: {
@@ -1907,6 +2662,11 @@ collisions = {
 			collisions['CueBall']['SimpleBrick'](ball, brick);
 		}
 	},
+	PolygonBrick: {
+		CueBall: function (brick, ball) {
+			collisions['CueBall']['PolygonBrick'](ball, brick);
+		}
+	}
 };
 
 function ballBallCollision(ball1, ball2) {
@@ -2027,6 +2787,60 @@ function ballPaddleCollision(ball, paddle) {
 	}
 	var pnf = ball.mass*(ball.vx*collData.u.x + ball.vy*collData.u.y); // final momentum of ball along axis of collision
 	return {dp: Math.abs(pn - pnf)};
+}
+
+// polygon must have a vertices array, with the vertices as {x:, y:} objects in order
+function polygonBallCollision(polygon, ball) {
+	var normalCollisions = []; // collisions with each line or vertex
+	var nearCollisions = [];
+	var centerCollisions = [];
+	var v = polygon.vertices.length;
+	for (var i = 0; i < v; i++) {
+		var line = {
+			p1: {
+				x: polygon.vertices[i].x,
+				y: polygon.vertices[i].y
+			},
+			p2: {
+				x: polygon.vertices[(i + 1) % v].x,
+				y: polygon.vertices[(i + 1) % v].y
+			}
+		};
+		var lColl = segmentCircleKinematics(line, ball);
+		if (lColl !== null) {
+			if (lColl.type == 'normal') normalCollisions.push(lColl);
+			else if (lColl.type == 'near collision') nearCollisions.push(lColl);
+			else if (lColl.type == 'center on line') centerCollisions.push(lColl);
+		}
+		var pColl = pointCircleKinematics(polygon.vertices[i], ball);
+		if (pColl !== null) {
+			if (pColl.type == 'normal') normalCollisions.push(pColl);
+			else if (pColl.type == 'near collision') nearCollisions.push(pColl);
+			else if (pColl.type == 'center on point') centerCollisions.push(pColl);
+		}
+	}
+	if (normalCollisions.length === 0) {
+		if (centerCollisions.length === 0) {
+			if (nearCollisions.length === 0) return null;
+			else {
+				ball.nearCollision = true;
+				return null
+			}
+		} else {
+			ball.vx++;
+			ball.vy++; // nudge the ball -- but this shouldn't ever actually happen anyway
+			return null;
+		}
+	}
+	// find minimum ds in normal collisions, the distance from center of ball to the thing it's hitting
+	var minColl = normalCollisions[0];
+	for (var i = 1; i < normalCollisions.length; i++) {
+		if (normalCollisions[i].ds < minColl.ds) minColl = normalCollisions[i]; // we'll tweak if necessary; it probably won't be
+	}
+	// actually affect the ball now
+	ball.vx += 2*minColl.vnf*minColl.u.x;
+	ball.vy += 2*minColl.vnf*minColl.u.y;
+	return {dp: ball.mass*2*minColl.vnf};
 }
 
 // deals with compression for an arc collision
@@ -2178,6 +2992,93 @@ function lineCircleKinematics(wall, ball) {
 			x: ux,
 			y: uy
 		}
+	};
+}
+
+// can be stacked for a polygon
+// line here, assumed stationary (for now), needs the following form:
+/*
+	{
+		p1: {
+			x: (...),
+			y: (...),
+		},
+		p2: {
+			x: (...),
+			y: (...)
+		}
+	}
+*/
+// circle, assumed moving, needs the following form:
+/*
+	{
+		x: (...),
+		y: (...),
+		vx: (...),
+		vy: (...),
+		radius: (...)
+	}
+*/
+// line segment is OPEN, meaning that no collisions will take place involving the endpoints.
+// this is important, because it means that endpoints WILL need to be handled, but separately
+function segmentCircleKinematics(line, circle) {
+	var directionVector = {
+		x: line.p2.x - line.p1.x,
+		y: line.p2.y - line.p1.y
+	}; // p, from p1 to p2, such that p1 + directionVector = p2
+	var pp = directionVector.x*directionVector.x + directionVector.y*directionVector.y; // |p|^2
+	var bVector = {
+		x: circle.x - line.p1.x,
+		y: circle.y - line.p1.y
+	}; // b, from p1 to the center of the circle
+	var t = (directionVector.x*bVector.x + directionVector.y*bVector.y)/pp; // if the line from p1 to p2 is parametrized from t = 0 to t = 1, this would be the value of t at which b is closest to the line
+	if (t <= 0 || t >= 1) return null; // collision is not with the line
+	var scVector = {
+		x: bVector.x - t*directionVector.x,
+		y: bVector.y - t*directionVector.y
+	}; // vector from closest point on segment to center of circle
+	var ds = distance(0, 0, scVector.x, scVector.y); // distance from segment to circle
+	if (ds > 2*circle.radius) return null;
+	if (ds > circle.radius) return {type: 'near collision'};
+	if (ds == 0) return {type: 'center on line'};
+	var compression = circle.radius - ds;
+	var u = {
+		x: scVector.x/ds,
+		y: scVector.y/ds
+	}; // unit normal vector
+	var vn = circle.vx*u.x + circle.vy*u.y; // normal velocity
+	if (vn >= 0) return null; // if the circle is already heading away from the line, there's nothing to do here
+	return {
+		type: "normal",
+		compression: compression,
+		vn: vn,
+		vnf: -vn, // the ball bounces back at the same normal velocity, for now
+		u: u,
+		ds: ds
+	};
+}
+
+// point assumed stationary; has x and y
+// circle like segmentCircleKinematics
+function pointCircleKinematics(point, circle) {
+	var ds = distance(point.x, point.y, circle.x, circle.y);
+	if (ds > 2*circle.radius) return null;
+	if (ds > circle.radius) return {type: 'near collision'};
+	if (ds == 0) return {type: 'center on point'};
+	var compression = circle.radius - ds;
+	var u = {
+		x: (circle.x - point.x)/ds,
+		y: (circle.y - point.y)/ds
+	};
+	var vn = circle.vx*u.x + circle.vy*u.y; // normal velocity
+	if (vn >= 0) return null; // if the circle is already heading away from the point, there's nothing to do here
+	return {
+		type: "normal",
+		compression: compression,
+		vn: vn,
+		vnf: -vn, // the ball bounces back at the same normal velocity, for now
+		u: u,
+		ds: ds
 	};
 }
 
@@ -3146,6 +4047,101 @@ HealingBrick.prototype.damage = function (dam) {
 	}
 }
 
+/***************************************************************************************************\
+██████╗  ██████╗ ██╗     ██╗   ██╗ ██████╗  ██████╗ ███╗   ██╗    ██████╗ ██████╗ ██╗ ██████╗██╗  ██╗
+██╔══██╗██╔═══██╗██║     ╚██╗ ██╔╝██╔════╝ ██╔═══██╗████╗  ██║    ██╔══██╗██╔══██╗██║██╔════╝██║ ██╔╝
+██████╔╝██║   ██║██║      ╚████╔╝ ██║  ███╗██║   ██║██╔██╗ ██║    ██████╔╝██████╔╝██║██║     █████╔╝ 
+██╔═══╝ ██║   ██║██║       ╚██╔╝  ██║   ██║██║   ██║██║╚██╗██║    ██╔══██╗██╔══██╗██║██║     ██╔═██╗ 
+██║     ╚██████╔╝███████╗   ██║   ╚██████╔╝╚██████╔╝██║ ╚████║    ██████╔╝██║  ██║██║╚██████╗██║  ██╗
+╚═╝      ╚═════╝ ╚══════╝   ╚═╝    ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝    ╚═════╝ ╚═╝  ╚═╝╚═╝ ╚═════╝╚═╝  ╚═╝
+\***************************************************************************************************/
+
+function PolygonBrick(vertices, HPperArea) {
+	// basics
+	this.type = 'PolygonBrick';
+	this.locked = false;
+	
+	// definition
+	this.vertices = vertices; // it's just a list of vertices, which makes it kind of difficult to get anything else, but we do need area
+	// maybe at some point we'll also need centroid, moment of inertia, etc., but for now...
+	this.nVertices = vertices.length;
+	this.area = 0;
+	for (var i = 0; i < this.nVertices; i++) {
+		this.area += vertices[i].x*vertices[(i + 1) % this.nVertices].y - vertices[i].y*vertices[(i + 1) % this.nVertices].x;
+	}
+	this.area = Math.abs(this.area/2.0);
+	
+	// drawing
+	this.fillR = 32;
+	this.fillG = 140;
+	this.fillB = 32;
+	this.fillA = 1.0;
+	this.strokeR = 64;
+	this.strokeG = 255;
+	this.strokeB = 64;
+	this.strokeA = 1.0;
+	this.lineWidth = 2;
+	
+	// animation
+	this.hitTime = this.area/3000.0;
+	this.totalHitFrames = (this.hitTime*1000)/globalOptions.mspf;
+	this.hitFrame = this.totalHitFrames;
+	this.dying = false;
+	this.deathTime = this.area/6000.0;
+	this.totalDeathFrames = (this.deathTime*1000)/globalOptions.mspf;
+	this.deathFrame = 0;
+
+	// sound
+	this.frequency1 = 24*C1;
+	this.frequency2 = 30*C1;
+	
+	// game
+	this.maxHP = HPperArea * this.area;
+	this.HP = this.maxHP;
+}
+PolygonBrick.prototype = new GameObject();
+
+PolygonBrick.prototype.update = function () {
+	if (this.locked) return;
+	GameObject.prototype.update.call(this);
+	if (this.hitFrame < this.totalHitFrames) this.hitFrame++;
+	if (this.HP <= 0) {
+		this.dying = true;
+		this.HP = 0;
+	}
+	if (this.dying) {
+		this.deathFrame++;
+		if (this.deathFrame >= this.totalDeathFrames) this.remove = true;
+	}
+	this.fillA = (this.hitFrame/this.totalHitFrames) * (this.HP/this.maxHP);
+	this.strokeA = (1 - (this.deathFrame/this.totalDeathFrames));
+}
+
+PolygonBrick.prototype.draw = function (f) {
+	if (f === undefined) f = 1;
+	GameObject.prototype.draw.call(this);
+	gameCtx.lineWidth = this.lineWidth;
+	gameCtx.fillStyle = rgba(this.fillR,this.fillG,this.fillB,this.fillA*f);
+	gameCtx.strokeStyle = rgba(this.strokeR,this.strokeG,this.strokeB,this.strokeA*f);
+	gameCtx.beginPath();
+	gameCtx.moveTo(this.vertices[0].x, this.vertices[0].y);
+	for (var i = 1; i <= this.nVertices; i++) {
+		gameCtx.lineTo(this.vertices[i % this.nVertices].x, this.vertices[i % this.nVertices].y)
+	}
+	gameCtx.fill();
+	gameCtx.stroke();
+}
+
+PolygonBrick.prototype.damage = function (dam) {
+	this.HP -= dam;
+	this.hitFrame = ((2.0*this.HP/3.0)/this.maxHP)*this.totalHitFrames;
+	if (this.hitFrame < 0) this.hitFrame = 0;
+	if (this.HP < 0) {
+		this.HP = 0;
+		this.dying = true;
+	}
+}
+
 /****************************************************************************************\
  █████╗ ██╗   ██╗██████╗ ██╗ ██████╗     ██████╗ ██╗      █████╗ ██╗   ██╗███████╗██████╗ 
 ██╔══██╗██║   ██║██╔══██╗██║██╔═══██╗    ██╔══██╗██║     ██╔══██╗╚██╗ ██╔╝██╔════╝██╔══██╗
@@ -3210,6 +4206,7 @@ function Tone(frequency, duration, gain) {
 		release: 20, // *past* specified duration
 		attackGain: 2.0 // ratio of max power after attack to sustain power
 	};
+	this.pwm = 1.0; // in pulse-width modulated sounds, this is the pulse width, in multiples of pi (not 2pi)
 }
 
 // calculates relevant frame points for the envelope
@@ -3251,6 +4248,10 @@ Tone.prototype.generate = function () {
 	else if (this.formula == 'square') sample = (this.phase < Math.PI) ? 1.0 : -1.0;
 	else if (this.formula == 'sine') sample = Math.sin(this.phase);
 	else if (this.formula == 'triangle') sample = 2.0*Math.abs((this.phase/Math.PI) - 1.0) - 1.0;
+	else if (this.formula == 'pwmA') {
+		this.pwm = 1.0 - this.frame/(this.releaseUntilFrame);
+		sample = (this.phase < this.pwm*Math.PI) ? 1.0 : -1.0;
+	}
 	sample *= this.gain*this.generateEnvelope();
 
 	// update
@@ -3270,7 +4271,7 @@ Tone.prototype.fourier = function () {
 }
 
 Tone.prototype.setFormula = function (formula) {
-	if (formula == 'sawtooth' || formula == 'square' || formula == 'sine' || formula == 'triangle') this.formula = formula;
+	if (formula == 'sawtooth' || formula == 'square' || formula == 'sine' || formula == 'triangle' || formula == 'pwmA') this.formula = formula;
 	else if (formula == 'sawtooth5') {
 		this.fourierCoeffs = [1, 0.5, 1.0/3.0, 0.25, 0.2];
 		this.fourierOffsets = [0, 0, 0, 0, 0];
@@ -3379,6 +4380,38 @@ soundBank = {
 		sound2.envelope.decay = 45;
 		sound2.envelope.release = 200;
 		sound2.play();
+	},
+	'polygonClunk': function (p, freq1, freq2) {
+		var sound1 = new Tone(freq1, 50, p);
+		sound1.setFormula('pwmA');
+		sound1.envelope.attackGain = 2.0;
+		sound1.envelope.attack = 10;
+		sound1.envelope.decay =  10;
+		sound1.envelope.release = 50;
+		var sound2 = new Tone(freq2, 50, p);
+		sound2.setFormula('pwmA');
+		sound2.envelope.attackGain = 2.0;
+		sound2.envelope.attack = 10;
+		sound2.envelope.decay =  10;
+		sound2.envelope.release = 50;
+		sound1.play();
+		sound2.play();
+	},
+	'polygonDestroy': function (p, freq1, freq2) {
+		var sound1 = new Tone(freq1, 100, p);
+		sound1.setFormula('pwmA');
+		sound1.envelope.attackGain = 2.0;
+		sound1.envelope.attack = 10;
+		sound1.envelope.decay =  10;
+		sound1.envelope.release = 100;
+		var sound2 = new Tone(freq2, 100, p);
+		sound2.setFormula('pwmA');
+		sound2.envelope.attackGain = 2.0;
+		sound2.envelope.attack = 10;
+		sound2.envelope.decay =  10;
+		sound2.envelope.release = 100;
+		sound1.play();
+		sound2.play();
 	}
 };
 
@@ -3389,6 +4422,6 @@ soundBank = {
 	<body onload="load();">
 		<canvas id="game" height=800 width=800 tabindex="0"></canvas>
 		<br />
-		press p to pause/unpause; click to lift the paddle and grab the ball or retrieve it if it's away too long (<a href="faq.html">faq</a>)
+		press p to pause/unpause; hold the mouse button to lift the paddle and grab the ball or retrieve it if it's away too long (<a href="faq.html">faq</a>)
 	</body>
 </html>
