@@ -4382,15 +4382,15 @@ soundBank = {
 		sound2.play();
 	},
 	'polygonClunk': function (p, freq1, freq2) {
-		var sound1 = new Tone(freq1, 50, p);
+		var sound1 = new Tone(freq1, 60, p*0.7);
 		sound1.setFormula('pwmA');
-		sound1.envelope.attackGain = 2.0;
+		sound1.envelope.attackGain = 3.0;
 		sound1.envelope.attack = 10;
 		sound1.envelope.decay =  10;
 		sound1.envelope.release = 50;
-		var sound2 = new Tone(freq2, 50, p);
+		var sound2 = new Tone(freq2, 50, p*0.7);
 		sound2.setFormula('pwmA');
-		sound2.envelope.attackGain = 2.0;
+		sound2.envelope.attackGain = 0.4;
 		sound2.envelope.attack = 10;
 		sound2.envelope.decay =  10;
 		sound2.envelope.release = 50;
@@ -4398,15 +4398,15 @@ soundBank = {
 		sound2.play();
 	},
 	'polygonDestroy': function (p, freq1, freq2) {
-		var sound1 = new Tone(freq1, 100, p);
+		var sound1 = new Tone(freq1, 120, p*0.7);
 		sound1.setFormula('pwmA');
-		sound1.envelope.attackGain = 2.0;
+		sound1.envelope.attackGain = 3.0;
 		sound1.envelope.attack = 10;
 		sound1.envelope.decay =  10;
 		sound1.envelope.release = 100;
-		var sound2 = new Tone(freq2, 100, p);
+		var sound2 = new Tone(freq2, 100, p*0.7);
 		sound2.setFormula('pwmA');
-		sound2.envelope.attackGain = 2.0;
+		sound2.envelope.attackGain = 0.4;
 		sound2.envelope.attack = 10;
 		sound2.envelope.decay =  10;
 		sound2.envelope.release = 100;
