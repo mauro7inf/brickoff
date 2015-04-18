@@ -69,7 +69,6 @@ var C1 = 440.0/Math.pow(2, 45.0/12.0); // frequency of C1
 function load() { // initialization
 	gameCanvas = document.getElementById('game');
 	gameCtx = gameCanvas.getContext('2d');
-	gameCtx.miterLimit = 2;
 	titleScreen.initTitle();
 	document.addEventListener('mouseout', onMouseOut, false);
 	document.addEventListener('mousemove', onMouseMove, false);
@@ -1512,7 +1511,7 @@ levelScreen.initBricks3 = function () {
 
 levelScreen.initBricks4 = function () {
 	var self = this;
-	var gs = 692/28.0; // grid size
+	var gs = 698/28.0; // grid size
 	var bs = 2*Math.sqrt(2); // brick spacing; it's actually twice this, but this is the distance from the grid lines
 	var ls = 2; // linear brick spacing
 
@@ -1540,10 +1539,10 @@ levelScreen.initBricks4 = function () {
 				y: resVector.y/drv
 			};
 			var correctedVertex = {
-				x: vertices[i].x*gs + self.lb + 4,
-				y: vertices[i].y*gs + self.tb + 4
+				x: vertices[i].x*gs + self.lb + 1,
+				y: vertices[i].y*gs + self.tb + 1
 			};
-			if (vertices[i].hasOwnProperty('e')) { // direction in which to nudge; default is angle bisector of brick angle there
+			/*if (vertices[i].hasOwnProperty('e')) { // direction in which to nudge; default is angle bisector of brick angle there
 				if (vertices[i].e == 'leave'); // don't nudge
 				else if (vertices[i].e == 'l') {
 					correctedVertex.x -= ls;
@@ -1567,9 +1566,13 @@ levelScreen.initBricks4 = function () {
 					correctedVertex.y -= ls;
 				}
 			} else {
-				correctedVertex.x += u.x*bs;
-				correctedVertex.y += u.y*bs;
-			}
+				var scalingFactor = dpv/(u.x*prevVector.y - u.y*prevVector.x);
+				correctedVertex.x += u.x*ls*scalingFactor;
+				correctedVertex.y += u.y*ls*scalingFactor;
+			}*/
+			var scalingFactor = dpv/(u.x*prevVector.y - u.y*prevVector.x);
+			correctedVertex.x += u.x*ls*scalingFactor;
+			correctedVertex.y += u.y*ls*scalingFactor;
 			correctedVertices.push(correctedVertex);
 		}
 		var brick = new PolygonBrick(correctedVertices, 6000);
