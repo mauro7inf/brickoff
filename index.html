@@ -1584,7 +1584,7 @@ levelScreen.initBricks4 = function () {
 		brick.strokeR = 2*brick.fillR;
 		brick.strokeG = 2*brick.fillG;
 		brick.strokeB = 2*brick.fillB;
-		var brickNotes = Math.floor(Math.random()*6.0);
+		/*var brickNotes = Math.floor(Math.random()*6.0);
 		if (brickNotes == 0) {
 			brick.frequency1 = 22*C1;
 			brick.frequency2 = 28*C1;
@@ -1606,9 +1606,32 @@ levelScreen.initBricks4 = function () {
 		} else if (brickNotes == 6) {
 			brick.frequency1 = 40*C1;
 			brick.frequency2 = 50*C1;
+		}*/
+		var brickNotes = Math.floor(Math.random()*6.0);
+		if (brickNotes == 0) {
+			brick.frequency1 = 24*C1;
+			brick.frequency2 = 30*C1;
+		} else if (brickNotes == 1) {
+			brick.frequency1 = 28*C1;
+			brick.frequency2 = 36*C1;
+		} else if (brickNotes == 2) {
+			brick.frequency1 = 32*C1;
+			brick.frequency2 = 40*C1;
+		} else if (brickNotes == 3) {
+			brick.frequency1 = 36*C1;
+			brick.frequency2 = 44*C1;
+		} else if (brickNotes == 4) {
+			brick.frequency1 = 40*C1;
+			brick.frequency2 = 48*C1;
+		} else if (brickNotes == 5) {
+			brick.frequency1 = 44*C1;
+			brick.frequency2 = 56*C1;
 		}
+		brick.frequency3 = 16*C1;
 		self.bricks.push(brick);
 	}
+
+	// e is ignored; it has been worked around
 
 	// 1
 	createPolygonBrick([
@@ -2620,7 +2643,7 @@ collisions = {
 			var collData = polygonBallCollision(brick, ball);
 			if (!collData) return;
 			brick.damage(collData.dp);
-			brick.dying ? soundBank.polygonDestroy(collData.dp/100000000.0, brick.frequency1, brick.frequency2) : soundBank.polygonClunk(collData.dp/100000000.0, brick.frequency1, brick.frequency2);
+			brick.dying ? soundBank.polygonDestroy(collData.dp/100000000.0, brick.frequency1, brick.frequency2, brick.frequency3) : soundBank.polygonClunk(collData.dp/100000000.0, brick.frequency1, brick.frequency2, brick.frequency3);
 		}
 	},
 	SimpleBrick: {
@@ -4097,6 +4120,7 @@ function PolygonBrick(vertices, HPperArea) {
 	// sound
 	this.frequency1 = 24*C1;
 	this.frequency2 = 30*C1;
+	this.frequency3 = 16*C1; // intended to be a lower drone
 	
 	// game
 	this.maxHP = HPperArea * this.area;
@@ -4384,7 +4408,7 @@ soundBank = {
 		sound2.envelope.release = 200;
 		sound2.play();
 	},
-	'polygonClunk': function (p, freq1, freq2) {
+	'polygonClunk': function (p, freq1, freq2, freq3) {
 		var sound1 = new Tone(freq1, 60, p*0.7);
 		sound1.setFormula('pwmA');
 		sound1.envelope.attackGain = 3.0;
@@ -4397,10 +4421,17 @@ soundBank = {
 		sound2.envelope.attack = 10;
 		sound2.envelope.decay =  10;
 		sound2.envelope.release = 50;
+		var sound3 = new Tone(freq3, 70, p*0.4);
+		sound3.setFormula('pwmA');
+		sound3.envelope.attackGain = 1.5;
+		sound3.envelope.attack = 10;
+		sound3.envelope.decay = 10;
+		sound3.envelope.release = 60;
 		sound1.play();
 		sound2.play();
+		sound3.play();
 	},
-	'polygonDestroy': function (p, freq1, freq2) {
+	'polygonDestroy': function (p, freq1, freq2, freq3) {
 		var sound1 = new Tone(freq1, 120, p*0.7);
 		sound1.setFormula('pwmA');
 		sound1.envelope.attackGain = 3.0;
@@ -4413,8 +4444,15 @@ soundBank = {
 		sound2.envelope.attack = 10;
 		sound2.envelope.decay =  10;
 		sound2.envelope.release = 100;
+		var sound3 = new Tone(freq3, 140, p*0.4);
+		sound3.setFormula('pwmA');
+		sound3.envelope.attackGain = 1.5;
+		sound3.envelope.attack = 10;
+		sound3.envelope.decay = 10;
+		sound3.envelope.release = 110;
 		sound1.play();
 		sound2.play();
+		sound3.play();
 	}
 };
 
