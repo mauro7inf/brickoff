@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<meta name="description" content="Accelerating metronome by Mauro Braunstein" />
+		<meta name="keywords" content="metronome, accelerating" />
+		<title>Accelerating Metronome</title>
+		<link rel="icon" href="../synth/favicon.ico" type="image/x-icon" />
+		<link href="brickoff.css" rel="stylesheet" type="text/css" />
+		<script type="text/javascript">
+
+var audioCtx = window.AudioContext ? new AudioContext() : new webkitAudioContext;
+var audioPlayer;
+var sampleRate = audioCtx.sampleRate;
+var globalOptions = {
+	mspa: 1000.0/sampleRate
+}
+
+function load() {
+	audioPlayer.initAudio();
+}
+
+audioPlayer = {
+	tempo: 0,
+	notes: [],
+	note1Counter: 0, // play when it reaches 0, then set back to 1
+	note2Counter: 0,
+	ratio1: 0, // relative frequency of notes 1
+	ratio2: 0,
+	freq1: 0,
+	freq2: 0,
+	displayCounter: 0,
+	tempoIncrease: Math.log(2)/(3*sampleRate) // increase ratio; linear approximation to double every n seconds
+};
+
+audioPlayer.initAudio = function () {
+	this.scriptNode = audioCtx.createScriptProcessor(1024, 0, 1); // mono sound, no input buffer
+	this.scriptNode.connect(audioCtx.destination);
+	this.scriptNode.onaudioprocess = this.audioCallback;
+};
+
+audioPlayer.audioCallback = function (e) {
+	//console.log('huh');
+	var outputData = e.outputBuffer.getChannelData(0);
+	for (var sample = 0; sample < e.outputBuffer.length; sample++) {
+		outputData[sample] = 0;
+		if (audioPlayer.tempo > 0) {
+			if (audioPlayer.displayCounter <= 0) {
+
+				audioPlayer.display();
+				audioPlayer.displayCounter += 4410;
+			} else {
+				audioPlayer.displayCounter--;
+			}
+			if (audioPlayer.ratio1 > 0) {
+				if (audioPlayer.note1Counter <= 0) {
+					/*var duration = 20000.0/(audioPlayer.freq1*audioPlayer.tempo); // ms
+					if (duration > 200) duration = 200;
+					var sound = new Tone(1174.659072/4, duration, 0.2);
+					sound.play();*/
+					audioPlayer.note1Counter += 1;
+				} else {
+					if (audioPlayer.note1Counter > 0.75) {
+						outputData[sample] += Math.random()*(audioPlayer.note1Counter - 0.75);
+					}
+					audioPlayer.note1Counter -= (audioPlayer.freq1*audioPlayer.tempo)/(60.0*sampleRate);
+				}
+			}
+			if (audioPlayer.ratio2 > 0) {
+				if (audioPlayer.note2Counter <= 0) {
+					/*var duration = 20000.0/(audioPlayer.freq2*audioPlayer.tempo); // ms
+					if (duration > 200) duration = 200;
+					var sound = new Tone(2349.318143/4, duration, 0.2);
+					sound.play();*/
+					audioPlayer.note2Counter += 1;
+				} else {
+					if (audioPlayer.note2Counter > 0.75) {
+						outputData[sample] += Math.random()*(audioPlayer.note2Counter - 0.75);
+					}
+					audioPlayer.note2Counter -= (audioPlayer.freq2*audioPlayer.tempo)/(60.0*sampleRate);
+				}
+			}
+			audioPlayer.tempo += audioPlayer.tempoIncrease*audioPlayer.tempo;
+		}
+		/*for (var i = 0; i < audioPlayer.notes.length; i++) {
+			if (audioPlayer.notes[i] && audioPlayer.notes[i].isPlaying) outputData[sample] += audioPlayer.notes[i].generate();
+		}*/
+	}
+	/*for (var i = 0; i < audioPlayer.notes.length; i++) { // get rid of notes that are done
+		if (!(audioPlayer.notes[i].isPlaying)) {
+			audioPlayer.notes.splice(i,1);
+			i--;
+		}
+	}*/
+};
+
+audioPlayer.start = function () {
+	audioPlayer.ratio1 = parseFloat(document.getElementById('ratio1').value);
+	audioPlayer.ratio2 = parseFloat(document.getElementById('ratio2').value);
+	if (audioPlayer.ratio1 <= 0) {
+		audioPlayer.freq1 = 0;
+		audioPlayer.freq2 = 1;
+	} else {
+		audioPlayer.freq1 = 1;
+		audioPlayer.freq2 = audioPlayer.ratio2/audioPlayer.ratio1;
+	}
+	Math.log(2)/(2*sampleRate) // increase ratio; linear approximation to double every n seconds
+	audioPlayer.tempo = 12; // BPM
+};
+
+audioPlayer.stop = function () {
+	audioPlayer.tempo = 0;
+}
+
+audioPlayer.display = function () {
+	document.getElementById('tempo1').innerHTML = audioPlayer.freq1*audioPlayer.tempo;
+	document.getElementById('freq1').innerHTML = audioPlayer.freq1*audioPlayer.tempo/60.0;
+	document.getElementById('tempo2').innerHTML = audioPlayer.freq2*audioPlayer.tempo;
+	document.getElementById('freq2').innerHTML = audioPlayer.freq2*audioPlayer.tempo/60.0;
+}
+
+function Tone(frequency, duration, gain) {
+	if (duration < 2.0*globalOptions.mspa) duration = 2.0*globalOptions.mspa;
+	this.frequency = frequency;
+	this.duration = duration;
+	this.gain = gain;
+	this.formula = 'sine'; // can be set to something else
+	this.frame = 0; // current audio frame
+	this.isPlaying = false; // set that when it's added to the notes array
+	this.phase = Math.random()*2.0*Math.PI; // start with a random phase to prevent weird effects
+	this.fourierCoeffs = [];
+	this.fourierOffsets = [];
+	// envelope
+	this.envelope = {
+		attack: duration/20.0, // in ms
+		decay: 3.0*duration/20.0,
+		// sustain is governed by duration
+		release: 4.0*duration/20.0, // *past* specified duration
+		attackGain: 4.0 // ratio of max power after attack to sustain power
+	};
+	if (this.envelope.attack < globalOptions.mspa) this.envelope.attack = globalOptions.mspa;
+	if (this.envelope.decay < globalOptions.mspa) this.envelope.decay = globalOptions.mspa;
+	if (this.envelope.release < globalOptions.mspa) this.envelope.release = globalOptions.mspa;
+}
+
+// calculates relevant frame points for the envelope
+Tone.prototype.calculateFrames = function () {
+	this.attackUntilFrame = this.envelope.attack/globalOptions.mspa;
+	this.decayUntilFrame = this.attackUntilFrame + this.envelope.decay/globalOptions.mspa;
+	this.sustainUntilFrame = this.duration/globalOptions.mspa;
+	this.releaseUntilFrame = this.sustainUntilFrame + this.envelope.release/globalOptions.mspa;
+}
+
+// arbitrary stopping is not implemented -- notes stop automatically
+Tone.prototype.play = function () {
+	this.calculateFrames();
+	this.isPlaying = true;
+	audioPlayer.notes.push(this);
+}
+
+Tone.prototype.generateEnvelope = function () {
+	if (this.frame < this.attackUntilFrame) {
+		return (this.frame/this.attackUntilFrame)*this.envelope.attackGain;
+	} else if (this.frame < this.decayUntilFrame) {
+		return ((this.frame - this.attackUntilFrame)/(this.decayUntilFrame - this.attackUntilFrame))*(1.0 - this.envelope.attackGain) + this.envelope.attackGain;
+	} else if (this.frame < this.sustainUntilFrame) {
+		return 1;
+	} else if (this.frame < this.releaseUntilFrame) {
+		return 1.0 - (this.frame - this.sustainUntilFrame)/(this.releaseUntilFrame - this.sustainUntilFrame);
+	} else {
+		this.isPlaying = false;
+		return 0;
+	}
+}
+
+Tone.prototype.generate = function () {
+	if (!this.isPlaying) return 0;
+	if (typeof this.formula == 'function') return this.formula();
+	var sample = 0;
+	if (this.formula == 'sawtooth') sample = (this.phase/Math.PI) - 1.0;
+	else if (this.formula == 'sawtooth5') sample = this.fourier();
+	else if (this.formula == 'square') sample = (this.phase < Math.PI) ? 1.0 : -1.0;
+	else if (this.formula == 'sine') sample = Math.sin(this.phase);
+	else if (this.formula == 'triangle') sample = 2.0*Math.abs((this.phase/Math.PI) - 1.0) - 1.0;
+	sample *= this.gain*this.generateEnvelope();
+
+	// update
+	this.phase += Math.PI*this.frequency*globalOptions.mspa/500.0;
+	while (this.phase > 2*Math.PI) this.phase -= 2*Math.PI;
+	this.frame++;
+
+	return sample;
+}
+
+Tone.prototype.fourier = function () {
+	var sample = 0;
+	for (var i = 0; i < this.fourierCoeffs.length; i++) {
+		sample += this.fourierCoeffs[i]*Math.sin((i + 1)*(this.phase - this.fourierOffsets[i]));
+	}
+	return sample;
+}
+
+Tone.prototype.setFormula = function (formula) {
+	if (formula == 'sawtooth' || formula == 'square' || formula == 'sine' || formula == 'triangle') this.formula = formula;
+	else if (formula == 'sawtooth5') {
+		this.fourierCoeffs = [1, 0.5, 1.0/3.0, 0.25, 0.2];
+		this.fourierOffsets = [0, 0, 0, 0, 0];
+		this.formula = formula;
+	} else if (typeof formula == 'function') this.formula = formula;
+}
+
+
+		</script>
+	</head>
+	<body onload="load();">
+		Ratio: <input type="text" id="ratio1" value="3"></input>/<input type="text" id="ratio2" value="2"></input><br />
+		<button type="button" onclick="audioPlayer.start()">Start</button><button type="button" onclick="audioPlayer.stop()">Stop</button><br />
+		Top note tempo: <span id="tempo1">0</span> BPM, frequency: <span id="freq1">0</span> Hz<br />
+		Bottom note tempo: <span id="tempo2">0</span> BPM, frequency: <span id="freq2">0</span> Hz<br />
+	</body>
+</html>
