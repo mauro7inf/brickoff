@@ -7,11 +7,26 @@ body {
 	background-color: #1E1E1E;
 }
 
-canvas {
+div#canvasDiv {
 	outline: 0;
 	border: 0;
+	margin: 0;
+	padding: 0;
+	position: relative;
 	margin-left: auto;
 	margin-right: auto;
+	height: 800px;
+	width: 800px;
+}
+
+canvas#game {
+	cursor: crosshair;
+}
+
+canvas#controlCanvas {
+	position: absolute;
+	left: 0;
+	top: 0;
 	cursor: crosshair;
 }
 
