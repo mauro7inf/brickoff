@@ -40,7 +40,8 @@ function ballBallCollision(ball1, ball2) {
 		v2: collData.v2,
 		v1f: collData.v1f,
 		v2f: collData.v2f,
-		dp: dp
+		dp: dp,
+		u: collData.u
 	};
 }
 

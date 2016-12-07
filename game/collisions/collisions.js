@@ -115,6 +115,10 @@ collisions = {
 			if (!collData) return;
 			bomb.damage(bomb.mass*(collData.v2f - collData.v2));
 			soundBank.bombClunk(Math.abs(collData.dp/100000000.0), bomb.frequency);
+			if (bomb.cueBallBounce) {
+				cue.vx -= bomb.cueBallBounce*collData.u.x;
+				cue.vy -= bomb.cueBallBounce*collData.u.y;
+			}
 		},
 		Explosion: function (ball, explosion) {
 			explosionBallCollision(explosion, ball);

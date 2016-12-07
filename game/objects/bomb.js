@@ -25,6 +25,7 @@ function Bomb(x, y, radius, HP) {
 	this.explosionForceTotalFrames = this.explosionForceDuration/(globalOptions.mspf/1000.0);
 	this.explosionForceFrame = 0;
 	this.explosionForce = false;
+	this.cueBallBounce = 100; // added normal velocity when cue ball bounces off of the bomb
 	
 	// drawing
 	this.fillR = 255;

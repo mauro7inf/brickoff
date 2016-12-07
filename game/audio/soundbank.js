@@ -149,17 +149,17 @@ soundBank = {
 	},
 	'bombClunk': function (p, freq) {
 		var sound1 = new Tone(20*C1, 50, 0.7*p);
-		var sound2 = new Tone(freq, 50, 0.7*p);
+		var sound2 = new Tone(freq, 100, 1.3*p);
 		sound1.setFormula('sawtooth5');
 		sound2.setFormula('sine');
-		sound1.envelope.attackGain = 1.5;
-		sound1.envelope.attack = 10;
+		sound1.envelope.attackGain = 1.1;
+		sound1.envelope.attack = 40;
 		sound1.envelope.decay = 10;
 		sound1.envelope.release = 50;
-		sound2.envelope.attackGain = 1.5;
+		sound2.envelope.attackGain = 2;
 		sound2.envelope.attack = 10;
-		sound2.envelope.decay = 10;
-		sound2.envelope.release = 50;
+		sound2.envelope.decay = 30;
+		sound2.envelope.release = 200;
 		sound1.play();
 		sound2.play();
 	},
