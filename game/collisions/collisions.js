@@ -30,7 +30,13 @@ collisions = {
 		CueBall: function (wall, ball) {
 			if (wall.passable[ball.type]) return;
 			var collData = wallBallCollision(wall, ball);
-			if (collData) soundBank.wallClunk(collData.dp/100000000.0);
+			if (collData) {
+				if (ball.subtype == 'halfSize') {
+					soundBank.halfSizeWallClunk(collData.dp/100000000.0);
+				} else {
+					soundBank.wallClunk(collData.dp/100000000.0);
+				}
+			}
 		},
 		Bomb: function (wall, ball) {
 			if (wall.passable[ball.type]) return;
@@ -68,11 +74,29 @@ collisions = {
 			if (collData) {
 				ball.lastTouched = 0;
 				ball.expired = false;
-				soundBank.paddleTouch(collData.dp/100000000.0);
+				if (paddle.subtype == 'halfSize' && ball.subtype == 'halfSize') {
+					soundBank.halfSizePaddleTouch(collData.dp/100000000.0);
+				} else {
+					soundBank.paddleTouch(collData.dp/100000000.0);
+				}
 			}
 		},
 		ArcWall: function (paddle, arc) {
 			collisions['ArcWall']['PlayerPaddle'](arc, paddle);
+		},
+		PointWall: function (paddle, point) {
+			if (point.passable[paddle.type]) return;
+			var collData = pointCircleKinematics(point, paddle);
+			if (!collData) return;
+			if (collData.type == 'center on point') { // shouldn't happen
+				paddle.x++;
+				paddle.y++;
+				return;
+			} else if (collData.type == 'near collision') return;
+			paddle.vx += collData.vnf*collData.u.x; // zero out normal velocity
+			paddle.vy += collData.vnf*collData.u.y;
+			paddle.x += collData.compression*collData.u.x;
+			paddle.y += collData.compression*collData.u.y;
 		}
 	},
 	CueBall: {
@@ -93,9 +117,13 @@ collisions = {
 			var dp = 2*collData.vnf*ball.mass  // change in momentum of ball
 			brick.damage(dp);
 			if (brick.type == 'SimpleBrick') {
-				brick.dying ? soundBank.brickDestroy(dp/100000000.0, brick.frequency) : soundBank.brickClunk(dp/100000000.0, brick.frequency);
+				var s = 1; // sound multiplier
+				if (ball.subtype == 'halfSize') s = 4;
+				brick.dying ? soundBank.brickDestroy(s*dp/100000000.0, brick.frequency1, brick.frequency2) :
+					soundBank.brickClunk(s*dp/100000000.0, brick.frequency1, brick.frequency2);
 			} else if (brick.type == 'HealingBrick') {
-				brick.dying ? soundBank.healingDestroy(dp/100000000.0, brick.frequency) : soundBank.healingClunk(dp/100000000.0, brick.frequency);
+				brick.dying ? soundBank.healingDestroy(dp/100000000.0, brick.frequency) :
+					soundBank.healingClunk(dp/100000000.0, brick.frequency);
 			}
 		},
 		HealingBrick: function (ball, brick) {
@@ -122,6 +150,25 @@ collisions = {
 		},
 		Explosion: function (ball, explosion) {
 			explosionBallCollision(explosion, ball);
+		},
+		RectangularGravityField: function (ball, field) {
+			var overlapArea = rectangleCircleOverlap(field, ball);
+			if (overlapArea === 0) return;
+			var ballArea = ball.area;
+			var actionPart = overlapArea/ballArea;
+			ball.vx += field.g.x*(globalOptions.mspf/1000.0)*actionPart;
+			ball.vy += field.g.y*(globalOptions.mspf/1000.0)*actionPart;
+		},
+		PointWall: function (ball, point) {
+			if (point.passable[ball.type]) return;
+			var collData = pointBallCollision(point, ball);
+			if (collData) {
+				if (ball.subtype == 'halfSize') {
+					soundBank.halfSizeWallClunk(collData.dp/100000000.0);
+				} else {
+					soundBank.wallClunk(collData.dp/100000000.0);
+				}
+			}
 		}
 	},
 	SimpleBrick: {
@@ -148,7 +195,11 @@ collisions = {
 			}
 			if (collData && collData.type != "near collision") {
 				var dp = ball.mass*2*collData.vnf;
-				soundBank.wallClunk(dp/100000000.0);
+				if (ball.subtype == 'halfSize') {
+					soundBank.halfSizeWallClunk(dp/100000000.0);
+				} else {
+					soundBank.wallClunk(dp/100000000.0);
+				}
 			}
 		},
 		PlayerPaddle: function (arc, paddle) {
@@ -222,6 +273,19 @@ collisions = {
 		},
 		Bomb: function (explosion, bomb) {
 			collisions['Bomb']['Explosion'](bomb, explosion);
+		}
+	},
+	RectangularGravityField: {
+		CueBall: function (field, ball) {
+			collisions['CueBall']['RectangularGravityField'](ball, field);
+		}
+	},
+	PointWall: {
+		CueBall: function (point, ball) {
+			collisions['CueBall']['PointWall'](ball, point);
+		},
+		PlayerPaddle: function (point, paddle) {
+			collisions['PlayerPaddle']['PointWall'](paddle, point);
 		}
 	}
 };

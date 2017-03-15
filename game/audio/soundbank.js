@@ -6,8 +6,19 @@ soundBank = {
 		sound.envelope.attackGain = 1.2;
 		sound.play();
 	},
+	'halfSizeDeath': function () {
+		var sound = new Tone(3*C1, 150, 0.3);
+		sound.envelope.attack = 20;
+		sound.envelope.attackGain = 1.2;
+		sound.play();
+	},
 	'wallClunk': function (p) {
 		var sound = new Tone(4*C1, 100, 3*p);
+		sound.setFormula('triangle');
+		sound.play();
+	},
+	'halfSizeWallClunk': function (p) {
+		var sound = new Tone(6*C1, 100, 12*p);
 		sound.setFormula('triangle');
 		sound.play();
 	},
@@ -18,6 +29,10 @@ soundBank = {
 	},
 	'paddleTouch': function (p) {
 		var sound = new Tone(8*C1, 100, p);
+		sound.play();
+	},
+	'halfSizePaddleTouch': function (p) {
+		var sound = new Tone(12*C1, 100, 4*p);
 		sound.play();
 	},
 	'paddleCapture': function () {
@@ -32,9 +47,21 @@ soundBank = {
 		sound1.play();
 		sound2.play();
 	},
-	'brickClunk': function (p, freq) {
-		var sound1 = new Tone(16*C1, 50, 0.7*p);
-		var sound2 = new Tone(freq, 50, 0.7*p);
+	'halfSizePaddleCapture': function () {
+		var sound1 = new Tone(18*C1, 50, 0.09);
+		var sound2 = new Tone(9*C1, 50, 0.03);
+		sound1.setFormula('triangle');
+		sound2.setFormula('square');
+		sound1.envelope.release = 400;
+		sound1.envelope.attackGain = 1.0;
+		sound2.envelope.release = 200;
+		sound2.envelope.attackGain = 1.5
+		sound1.play();
+		sound2.play();
+	},
+	'brickClunk': function (p, freq1, freq2) {
+		var sound1 = new Tone(freq1, 50, 0.7*p);
+		var sound2 = new Tone(freq2, 50, 0.7*p);
 		sound1.setFormula('sawtooth5');
 		sound2.setFormula('sine');
 		sound1.envelope.attackGain = 1.5;
@@ -48,9 +75,9 @@ soundBank = {
 		sound1.play();
 		sound2.play();
 	},
-	'brickDestroy': function (p, freq) {
-		var sound1 = new Tone(16*C1, 50, 0.7*p);
-		var sound2 = new Tone(freq, 50, 0.7*p);
+	'brickDestroy': function (p, freq1, freq2) {
+		var sound1 = new Tone(freq1, 50, 0.7*p);
+		var sound2 = new Tone(freq2, 50, 0.7*p);
 		sound1.setFormula('sawtooth5');
 		sound2.setFormula('sine');
 		sound1.envelope.attackGain = 4.0;

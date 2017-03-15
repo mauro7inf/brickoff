@@ -89,11 +89,29 @@ function lineCircleKinematics(wall, ball) {
 	var dx = ball.x - xColl;
 	var dy = ball.y - yColl;
 	var ds = distance(xColl, yColl, ball.x, ball.y);
-	if (ds == 0) return {type: "center on line"};
-	if ((ball.lastPosition.x - xColl)*dx + (ball.lastPosition.y - yColl)*dy < 0) ds *= -1;
-	var compression = ball.radius - ds;
-	var ux = dx/ds; // unit vector from point of collision to center of ball
-	var uy = dy/ds;
+	var compression;
+	var ux;
+	var uy;
+	if (ds == 0) {
+		// normal from wall: (A/D, B/D)
+		dx = ball.lastPosition.x - xColl;
+		dy = ball.lastPosition.y - yColl;
+		if (dx*wall.A/wall.D + dy*wall.B/wall.D >= 0) {
+			ux = wall.A/wall.D;
+			uy = wall.B/wall.D;
+		} else {
+			ux = -wall.A/wall.D;
+			uy = -wall.A/wall.D;
+		}
+		compression = ball.radius;
+	} else {
+		if ((ball.lastPosition.x - xColl)*dx + (ball.lastPosition.y - yColl)*dy < 0) {
+			ds *= -1;
+		}
+		ux = dx/ds; // unit vector from point of collision to center of ball
+		uy = dy/ds;
+		compression = ball.radius - ds;
+	}
 	var vn = ball.vx*ux + ball.vy*uy; // projection of ball's velocity onto the unit vector
 	if (ds > ball.radius/* && vn < 0*/) {
 		return {type: "near collision"};
@@ -341,27 +359,35 @@ function arcCircleKinematics(arc, ball, cR) { // yay polar coordinates
 		var ds1 = distance(x1, y1, ball.x, ball.y);
 		var ds2 = distance(x2, y2, ball.x, ball.y);
 		if (ds1 == 0 || ds2 == 0) return {type: "center on arc"};
-		if (ball.radius >= arc.radius) type = "larger ball";
-		else if (arc.open) return null; // no collision with endpoints if endpoints aren't included
-		if (ds1 > ball.radius && ds2 <= ball.radius) { // close to point 1
+		if (ball.radius >= arc.radius) {
+			type = "larger ball";
+		} else if (arc.open) {
+			return null; // no collision with endpoints if endpoints aren't included
+		}
+		//if (ds1 > ball.radius && ds2 <= ball.radius) { // close to point 1
+		if (ds1 <= ball.radius && ds1 < ds2) { // don't recenter except in cases of equality
 			xColl = x1;
 			yColl = y1;
 			ux = (ball.x - x1)/ds1;
 			uy = (ball.y - y1)/ds1;
 			compression = ds1 - ball.radius;
-		} else if (ds1 <= ball.radius && ds2 > ball.radius) { // close to point 2
+		//} else if (ds1 <= ball.radius && ds2 > ball.radius) { // close to point 2
+		} else if (ds2 <= ball.radius && ds2 < ds1) { // don't recenter except in cases of equality
 			xColl = x2;
 			yColl = y2;
 			ux = (ball.x - x2)/ds1;
 			uy = (ball.y - y2)/ds1;
 			compression = ds1 - ball.radius;
-		} else if (ds1 <= ball.radius && ds2 <= ball.radius) { // close to both
+		} else if (ds1 <= ball.radius && ds2 <= ball.radius) { // close to both (equally)
 			type = "recenter";
-			xColl = arc.radius*Math.cos(0.5*(t1 + t2)) + arc.x;
-			yColl = arc.radius*Math.sin(0.5*(t1 + t2)) + arc.y;
-			ux = -Math.cos(0.5*(t1 + t2));
-			uy = -Math.sin(0.5*(t1 + t2));
-			compression = undefined; // compression will be ignored
+			xColl = arc.radius*Math.cos(0.5*(arc.t1 + arc.t2)) + arc.x;
+			yColl = arc.radius*Math.sin(0.5*(arc.t1 + arc.t2)) + arc.y;
+			ux = -Math.cos(0.5*(arc.t1 + arc.t2));
+			uy = -Math.sin(0.5*(arc.t1 + arc.t2));
+			// compression will be measured from xColl and yColl
+			var halfAngle = 0.5*(arc.t2 - arc.t1);
+			var rcost = Math.cos(halfAngle)*arc.radius;
+			compression = Math.sqrt(rcost*rcost + ball.radius*ball.radius - arc.radius*arc.radius) - rcost;
 		} else if (ds1 > 2*ball.radius && ds2 > 2*ball.radius) { // far from both
 			return null; // no collision
 		} else { // one of the distances is not a collision but close to one
@@ -400,4 +426,38 @@ function explosionCircleKinematics(explosion, ball, fC) {
 		vn: vn,
 		vnf: vnf
 	};
+}
+
+// returns area of overlap; rectangle should have tl; {x:..., y...}, tr, bl, and br; circle should have x, y, and radius
+function rectangleCircleOverlap(rect, ball) {
+	if (rect.tl.x - ball.radius >= ball.x ||
+		rect.tl.y - ball.radius >= ball.y ||
+		rect.br.x + ball.radius <= ball.x ||
+		rect.br.y + ball.radius <= ball.y) {
+		// circle is outside the rectangle -- no intersection
+		return 0;
+	}
+	if (rect.tl.x + ball.radius <= ball.x &&
+		rect.tl.y + ball.radius <= ball.y &&
+		rect.br.x - ball.radius >= ball.x &&
+		rect.br.y - ball.radius >= ball.y) {
+		// circle is inside the rectangle -- intersection is circle
+		return Math.PI*ball.radius*ball.radius;
+	}
+	var dtl = distance(rect.tl.x, rect.tl.y, ball.x, ball.y); // distance of top left corner of rectangle from center of circle
+	var dtr = distance(rect.tr.x, rect.tr.y, ball.x, ball.y);
+	var dbl = distance(rect.bl.x, rect.bl.y, ball.x, ball.y);
+	var dbr = distance(rect.br.x, rect.br.y, ball.x, ball.y);
+	if (dtl <= ball.radius && dtr <= ball.radius && dbl <= ball.radius && dbr <= ball.radius) {
+		// all four corners of rectangle are inside the circle -- intersection is rectangle
+		return (rect.br.x - rect.tl.x)*(rect.br.y - rect.tl.y);
+	}
+	/*if (dtl >= ball.radius && dtr >= ball.radius && dbl >= ball.radius && dbr >= ball.radius) {
+		// none of the four corners is inside the circle
+		// we've already excluded the cases where there's no intersection or when the circle is completely inside,
+		// so this must mean that the circle is incompletely inside
+		// this is a hard problem and not one that actually comes up so far, so...
+	}*/
+	// ...just don't actually intersect!  Small ball, big field.  It's OK.
+	return 0;
 }

@@ -81,7 +81,66 @@ levelScreen.drawGameWallRounded = function (gStroke, gFill) {
 	gameCtx.lineTo(edgeWidth, gameCanvas.height - edgeWidth);
 	gameCtx.lineTo(goalLeftEdge, bottomEdge);
 	gameCtx.fill();
-}
+};
+
+levelScreen.clipGameWallRounded = function () {
+	// width of outside game wall border
+	var edgeWidth = this.edgeWidth;
+	var lineOverlap = 1.0; // don't clip exactly on the line to prevent bad anti-aliasing
+
+	// width of border between game wall and canvas wall
+	var tb = this.tb - lineOverlap;
+	var bb = this.bb - lineOverlap;
+	var lb = this.lb - lineOverlap;
+	var rb = this.rb - lineOverlap;
+
+	// wall dimensions
+	var top = tb;
+	var bottom = gameCanvas.height - bb;
+	var left = lb;
+	var right = gameCanvas.width - rb;
+	var r = this.cornerRadius - lineOverlap;
+
+	// goal dimensions
+	var bottomEdge = gameCanvas.height - edgeWidth;
+	var hMiddle = 0.5*(gameCanvas.width + lb - rb);
+	var goalWidth = this.goalWidth;
+	var goalLeft = hMiddle - 0.5*goalWidth; // where left edge of goal starts on bottom wall
+	var goalRight = hMiddle + 0.5*goalWidth;
+	var rg = this.goalRadius - lineOverlap; // radius of circle; note that the wall is the outer edge of the line
+	var b = bb - edgeWidth; // actual width of bottom buffer
+
+	var goalBottom = bottomEdge; // bottom y of goal circles
+	var goalLeftEdge = goalLeft + rg; // x of inner edge on left corner of goal; left edge is at (goalLeftEdge, goalBottom)
+	var goalRightEdge = goalRight - rg;
+	var theta = 0;
+	if (rg > b) { // quarter circle is incomplete
+		var Rcos = Math.sqrt(2*b*rg - b*b);
+		goalLeftEdge = goalLeft + Rcos;
+		goalRightEdge = goalRight - Rcos;
+		theta = Math.acos(Rcos/rg);
+	} else if (rg < b) { // quarter circle is complete and there's still some goal left to make using straight lines
+		goalBottom = bottom + rg;
+	}
+	var goalCenter = bottom + rg; // y of center of goal circles
+
+	gameCtx.beginPath();
+	gameCtx.moveTo(goalLeftEdge, bottomEdge);
+	if (rg < b) gameCtx.lineTo(goalLeftEdge, goalBottom);
+	gameCtx.arc(goalLeft, goalCenter, rg, 2*Math.PI - theta, 1.5*Math.PI, true);
+	gameCtx.lineTo(left + r, bottom);
+	gameCtx.arc(left + r, bottom - r, r, 0.5*Math.PI, Math.PI, false);
+	gameCtx.lineTo(left, top + r);
+	gameCtx.arc(left + r, top + r, r, Math.PI, 1.5*Math.PI, false);
+	gameCtx.lineTo(right - r, top);
+	gameCtx.arc(right - r, top + r, r, 1.5*Math.PI, 0, false);
+	gameCtx.lineTo(right, bottom - r);
+	gameCtx.arc(right - r, bottom - r, r, 0, 0.5*Math.PI, false);
+	gameCtx.lineTo(goalRight, bottom);
+	gameCtx.arc(goalRight, goalCenter, rg, 1.5*Math.PI, Math.PI + theta, true);
+	if (rg < b) gameCtx.lineTo(goalRightEdge, bottomEdge);
+	gameCtx.clip();
+};
 
 levelScreen.initWallsRounded = function () {
 	// build up walls
@@ -151,4 +210,7 @@ levelScreen.initWallsRounded = function () {
 	this.walls = [wallL, wallR, wallT, wallLB, wallRB, wallS, wallG, wallTL, wallTR, wallBR, wallBL, wallGL, wallGR, wallHL, wallHR];
 	if (wallEL !== undefined) this.walls.push(wallEL);
 	if (wallER !== undefined) this.walls.push(wallER);
-}
+	for (var w = 0; w < this.walls.length; w++) {
+		this.walls[w].open = true;
+	}
+};

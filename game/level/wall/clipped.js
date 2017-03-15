@@ -76,7 +76,63 @@ levelScreen.drawGameWallClipped = function (gStroke, gFill) {
 	gameCtx.lineTo(edgeWidth, gameCanvas.height - edgeWidth);
 	gameCtx.lineTo(goalLeftEdge, bottomEdge);
 	gameCtx.fill();
-}
+};
+
+levelScreen.clipGameWallClipped = function () {
+	// width of outside game wall border
+	var edgeWidth = this.edgeWidth;
+	var lineOverlap = 1.0; // don't clip exactly on the line to prevent bad anti-aliasing
+
+	// width of border between game wall and canvas wall
+	var tb = this.tb - lineOverlap;
+	var bb = this.bb - lineOverlap;
+	var lb = this.lb - lineOverlap;
+	var rb = this.rb - lineOverlap;
+
+	// wall dimensions
+	var top = tb;
+	var bottom = gameCanvas.height - bb;
+	var left = lb;
+	var right = gameCanvas.width - rb;
+	var r = this.cornerRadius - lineOverlap; // not actually a radius, but it fulfills the same purpose
+
+	// goal dimensions
+	var bottomEdge = gameCanvas.height - edgeWidth;
+	var hMiddle = 0.5*(gameCanvas.width + lb - rb);
+	var goalWidth = this.goalWidth;
+	var goalLeft = hMiddle - 0.5*goalWidth; // where left edge of goal starts on bottom wall
+	var goalRight = hMiddle + 0.5*goalWidth;
+	var rg = this.goalRadius - lineOverlap; // radius of circle; note that the wall is the outer edge of the line
+	var b = bb - edgeWidth; // actual width of bottom buffer
+
+	var goalBottom = bottomEdge; // bottom y of goal lines
+	var goalLeftEdge = goalLeft + rg; // x of inner edge on left corner of goal; left edge is at (goalLeftEdge, goalBottom)
+	var goalRightEdge = goalRight - rg;
+	if (rg > b) {
+		goalLeftEdge = goalLeft + b;
+		goalRightEdge = goalRight - b;
+	} else if (rg < b) {
+		goalBottom = bottom + rg;
+	}
+
+	// start with bottom left, from the goal, and go around the board to the other side of the goal
+	gameCtx.beginPath();
+	gameCtx.moveTo(goalLeftEdge, bottomEdge);
+	if (rg < b) gameCtx.lineTo(goalLeftEdge, goalBottom);
+	gameCtx.lineTo(goalLeft, bottom);
+	gameCtx.lineTo(left + r, bottom);
+	gameCtx.lineTo(left, bottom - r);
+	gameCtx.lineTo(left, top + r);
+	gameCtx.lineTo(left + r, top);
+	gameCtx.lineTo(right - r, top);
+	gameCtx.lineTo(right, top + r);
+	gameCtx.lineTo(right, bottom - r);
+	gameCtx.lineTo(right - r, bottom);
+	gameCtx.lineTo(goalRight, bottom);
+	gameCtx.lineTo(goalRightEdge, goalBottom);
+	if (rg < b) gameCtx.lineTo(goalRightEdge, bottomEdge);
+	gameCtx.clip();
+};
 
 levelScreen.initWallsClipped = function () {
 	// build up walls
@@ -116,7 +172,14 @@ levelScreen.initWallsClipped = function () {
 	wallGL.open = false;
 	var wallHL = new Wall(goalLeft + rEff, gameCanvas.height - this.bb + rEff, goalLeft + rEff, gameCanvas.height + 500);
 	var wallHR = new Wall(goalRight - rEff, gameCanvas.height - this.bb + rEff, goalRight - rEff, gameCanvas.height + 500);
+	var pointGL = new PointWall(goalLeft, gameCanvas.height - this.bb);
+	var pointGR = new PointWall(goalRight, gameCanvas.height - this.bb);
+	var pointHL = new PointWall(goalLeft + rEff, gameCanvas.height - this.bb + rEff);
+	var pointHR = new PointWall(goalRight - rEff, gameCanvas.height - this.bb + rEff);
 
 	// add walls to list for collisions
-	this.walls = [wallL, wallR, wallT, wallLB, wallRB, wallS, wallG, wallTL, wallTR, wallBR, wallBL, wallGL, wallGR, wallHL, wallHR];
-}
+	this.walls = [pointGL, pointGR, pointHL, pointHR, wallL, wallR, wallT, wallLB, wallRB, wallS, wallG, wallTL, wallTR, wallBR, wallBL, wallGL, wallGR, wallHL, wallHR];
+	for (var w = 0; w < this.walls.length; w++) {
+		if (this.walls[w].type !== 'PointWall') this.walls[w].open = true;
+	}
+};

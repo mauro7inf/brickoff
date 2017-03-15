@@ -14,8 +14,8 @@ levelScreen.initBricks2 = function () {
 			brick.strokeR = 2*brick.fillR;
 			brick.strokeG = 2*brick.fillG;
 			brick.strokeB = 2*brick.fillB;
-			if (j % 3 == 2) brick.frequency = 22*C1;
-			else if (j % 3 == 0) brick.frequency = 18*C1;
+			if (j % 3 == 2) brick.frequency2 = 22*C1;
+			else if (j % 3 == 0) brick.frequency2 = 18*C1;
 			this.bricks.push(brick);
 		}
 	}

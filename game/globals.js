@@ -33,4 +33,4 @@ var gameState = {
 // constants
 var C1 = 440.0/Math.pow(2, 45.0/12.0); // frequency of C1
 var startingLevel = 1;
-var endingLevel = 5;
+var endingLevel = 6;

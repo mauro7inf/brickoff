@@ -24,12 +24,13 @@ levelScreen = {
 	bricks: undefined,
 	walls: undefined,
 	paddle: undefined,
+	fields: undefined,
 	
 	// misc state
 	mouseDown: false,
 	retrieveLostBallNext: false,
 
-	// level geometry -- it's set by each level anyway
+	// default level geometry -- it's set by each level anyway
 	tb: 50, // top buffer between end of canvas and wall
 	bb: 50, // bottom buffer
 	lb: 50, // left buffer
@@ -84,6 +85,9 @@ levelScreen.initLevel = function (n) {
 	// make walls
 	this[this.levelData[this.level]['initWalls']]();
 
+	// make fields
+	this[this.levelData[this.level]['initFields']]();
+
 	// edit player lives
 	player.lives += this.levelData[this.level]['newLives'];
 };
@@ -123,6 +127,7 @@ levelScreen.capture = function () {
 
 levelScreen.reviseCapture = function () {
 	this.paddle.capturing = false;
+	this.paddle.resetCurrentMaxSpeed();
 	for (var b = 0; b < this.balls.length; b++) {
 		this.paddle.reviseCapture(this.balls[b]);
 	}
@@ -166,6 +171,7 @@ levelScreen.update = function () {
 		if (this.mouseDown) {
 			this.paddle.lifted = true;
 			this.paddle.capturing = false;
+			this.paddle.resetCurrentMaxSpeed();
 		} else {
 			if (this.paddle.lifted) this.capture();
 			else if (this.paddle.capturing) this.reviseCapture();
@@ -186,6 +192,9 @@ levelScreen.update = function () {
 		for (var b = 0; b < this.bricks.length; b++) {
 			this.bricks[b].update();
 		}
+		for (var i = 0; i < this.fields.length; i++) {
+			this.fields[i].update();
+		}
 		// collisions
 		if (this.paddle) {
 			for (var w = 0; w < this.walls.length; w++) {
@@ -193,6 +202,9 @@ levelScreen.update = function () {
 			}
 		}
 		for (var b = 0; b < this.balls.length; b++) {
+			for (var i = 0; i < this.fields.length; i++) {
+				collide(this.fields[i], this.balls[b]);
+			}
 			for (var w = 0; w < this.walls.length; w++) {
 				collide(this.walls[w], this.balls[b]);
 			}
@@ -205,6 +217,9 @@ levelScreen.update = function () {
 			if (this.paddle) collide(this.balls[b], this.paddle);
 		}
 		for (var b = 0; b < this.bricks.length; b++) {
+			for (var i = 0; i < this.fields.length; i++) {
+				collide(this.fields[i], this.bricks[b]);
+			}
 			for (var w = 0; w < this.walls.length; w++) {
 				collide(this.walls[w], this.bricks[b]);
 			}
@@ -243,7 +258,11 @@ levelScreen.update = function () {
 		// check whether all balls have been lost
 		if (!this.levelWon && this.balls.length == 0) {
 			this.death = true;
-			soundBank.death();
+			if (this.levelData[this.level]['deathSound']) {
+				soundBank[this.levelData[this.level]['deathSound']]();
+			} else {
+				soundBank.death();
+			}
 			if (player.lives > 0) {
 				this.deathFader = new Fader(0.5, 0.1, 0.5);
 			} else {
@@ -307,7 +326,16 @@ levelScreen.draw = function () {
 	this.drawOutline();
 	if (this.titleFader) this.drawTitle();
 	if (this.endingFader && this.endingFader.mode != 'inactive') this.drawEnding();
-	if ((!this.endingFader || this.endingFader.mode == 'inactive') && (!this.levelFader || this.levelFader.mode != 'inactive')) this.drawGameWall(f);
+
+	if ((!this.endingFader || this.endingFader.mode == 'inactive') && (!this.levelFader || this.levelFader.mode != 'inactive')) {
+		if (this.fields.length > 0) {
+			gameCtx.save();
+			this[this.levelData[this.level]['clipGameWall']](); // create clipping path for fields, which go under wall
+			for (var i = 0; i < this.fields.length; i++) this.fields[i].draw(f);
+			gameCtx.restore();
+		}
+		this.drawGameWall(f);
+	}
 	for (var w = 0; w < this.walls.length; w++) this.walls[w].draw(f);
 	for (var b = 0; b < this.balls.length; b++) this.balls[b].draw(f);
 	for (var b = 0; b < this.bricks.length; b++) this.bricks[b].draw(f);

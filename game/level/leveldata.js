@@ -12,9 +12,11 @@ levelScreen.levelData = {
 			goalRadius: 45
 		},
 		initWalls: 'initWallsRounded',
+		initFields: 'initFieldsNone',
 		initBricks: 'initBricks1',
 		initPaddleAndBall: 'initPaddleAndBallA',
 		drawGameWall: 'drawGameWallRounded',
+		clipGameWall: 'clipGameWallRounded',
 		gradients: 'gradients1',
 		outlineFill: {
 			r: 30,
@@ -40,9 +42,11 @@ levelScreen.levelData = {
 			goalRadius: 25
 		},
 		initWalls: 'initWallsRounded',
+		initFields: 'initFieldsNone',
 		initBricks: 'initBricks2',
 		initPaddleAndBall: 'initPaddleAndBallA',
 		drawGameWall: 'drawGameWallRounded',
+		clipGameWall: 'clipGameWallRounded',
 		gradients: 'gradients2',
 		outlineFill: {
 			r: 30,
@@ -69,9 +73,11 @@ levelScreen.levelData = {
 			centerLineOffset: 52
 		},
 		initWalls: 'initWallsClipped',
+		initFields: 'initFieldsNone',
 		initBricks: 'initBricks3',
 		initPaddleAndBall: 'initPaddleAndBallA',
 		drawGameWall: 'drawGameWallClipped',
+		clipGameWall: 'clipGameWallClipped',
 		gradients: 'gradients3',
 		outlineFill: {
 			r: 30,
@@ -97,9 +103,11 @@ levelScreen.levelData = {
 			goalRadius: 50
 		},
 		initWalls: 'initWallsClipped',
+		initFields: 'initFieldsNone',
 		initBricks: 'initBricks4',
 		initPaddleAndBall: 'initPaddleAndBallA',
 		drawGameWall: 'drawGameWallClipped',
+		clipGameWall: 'clipGameWallClipped',
 		gradients: 'gradients4',
 		outlineFill: {
 			r: 15,
@@ -126,9 +134,11 @@ levelScreen.levelData = {
 			centerLineOffset: 72
 		},
 		initWalls: 'initWallsRounded',
+		initFields: 'initFieldsNone',
 		initBricks: 'initBricks5',
 		initPaddleAndBall: 'initPaddleAndBallA',
 		drawGameWall: 'drawGameWallRounded',
+		clipGameWall: 'clipGameWallRounded',
 		gradients: 'gradients5',
 		outlineFill: {
 			r: 0,
@@ -140,5 +150,36 @@ levelScreen.levelData = {
 			g: 255,
 			b: 64
 		}
+	},
+	6: {
+		title: 'In g',
+		newLives: 2,
+		geometry: {
+			cornerRadius: 50,
+			tb: 50,
+			bb: 50,
+			lb: 50,
+			rb: 50,
+			goalWidth: 100,
+			goalRadius: 20
+		},
+		initWalls: 'initWallsRounded',
+		initFields: 'initFields6',
+		initBricks: 'initBricks6',
+		initPaddleAndBall: 'initPaddleAndBallHalfSize',
+		drawGameWall: 'drawGameWallRounded',
+		clipGameWall: 'clipGameWallRounded',
+		gradients: 'gradients6',
+		outlineFill: {
+			r: 0,
+			g: 30,
+			b: 15
+		},
+		outlineStroke: {
+			r: 64,
+			g: 255,
+			b: 160
+		},
+		deathSound: 'halfSizeDeath'
 	}
 };

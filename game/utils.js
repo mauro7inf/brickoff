@@ -20,6 +20,11 @@ function distance(x1, y1, x2, y2) { // distance between two points
 	return Math.sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
 }
 
+function projectionLength(v1, v2) { // project v1 onto v2, both vectors in the form {x:..., y:...}
+	var v2Norm = Math.sqrt(v2.x*v2.x + v2.y*v2.y);
+	return (v1.x*v2.x + v1.y*v2.y)/v2Norm;
+}
+
 function rgba(r, g, b, a) { // make RGBA string
 	// they need to be integers
 	r = Math.floor(r + 0.5);
@@ -98,4 +103,9 @@ function angleInRange(angle, t1, t2) {
 	while (angle < t1) angle += 2*Math.PI;
 	if (t1 <= angle && angle <= t2) return true;
 	return false;
+}
+
+// plus sign solution to the quadratic equation (x = (-b + sqrt(b^2 - 4ac))/(2a))
+function quadraticPlus(a, b, c) {
+	return (-b + Math.sqrt(b*b - 4*a*c))/(2*a);
 }

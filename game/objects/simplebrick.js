@@ -25,6 +25,7 @@ function SimpleBrick(x, y, w, h, HP) {
 	this.strokeG = 64;
 	this.strokeB = 64;
 	this.strokeA = 1.0;
+	this.lineWidth = 2.0;
 	
 	// animation
 	this.hitTime = this.area/3000.0;
@@ -36,7 +37,8 @@ function SimpleBrick(x, y, w, h, HP) {
 	this.deathFrame = 0;
 
 	// sound
-	this.frequency = 20*C1;
+	this.frequency1 = 16*C1;
+	this.frequency2 = 20*C1;
 	
 	// game
 	this.maxHP = HP;
@@ -63,7 +65,7 @@ SimpleBrick.prototype.update = function () {
 SimpleBrick.prototype.draw = function (f) {
 	if (f === undefined) f = 1;
 	GameObject.prototype.draw.call(this);
-	gameCtx.lineWidth = 2;
+	gameCtx.lineWidth = this.lineWidth;
 	gameCtx.fillStyle = rgba(this.fillR,this.fillG,this.fillB,this.fillA*f);
 	gameCtx.strokeStyle = rgba(this.strokeR,this.strokeG,this.strokeB,this.strokeA*f);
 	gameCtx.fillRect(this.tl.x, this.tl.y, this.w, this.h);

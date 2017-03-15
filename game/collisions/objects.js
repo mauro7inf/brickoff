@@ -57,7 +57,6 @@ function wallBallCollision(wall, ball) {
 		ball.nearCollision = true;
 		return null
 	}
-	//var vi = distance(0,0,ball.vx,ball.vy);
 	ball.vx += 2*collData.vnf*collData.u.x;
 	ball.vy += 2*collData.vnf*collData.u.y;
 	if (ball.rigidCollision == 0 ||
@@ -171,6 +170,19 @@ function polygonBallCollision(polygon, ball) {
 	ball.vx += 2*minColl.vnf*minColl.u.x;
 	ball.vy += 2*minColl.vnf*minColl.u.y;
 	return {dp: ball.mass*2*minColl.vnf};
+}
+
+// collide a point {x, y} with a ball {x, y, vx, vy, radius}
+function pointBallCollision(point, ball) {
+	var collData = pointCircleKinematics(point, ball);
+	if (!collData || (collData && collData.type !== 'normal')) return null;
+	ball.vx += 2*collData.vnf*collData.u.x;
+	ball.vy += 2*collData.vnf*collData.u.y;
+	ball.rigidVector.push({x: collData.u.x, y: collData.u.y});
+	ball.rigidCollision++;
+	ball.x += collData.compression*collData.u.x;
+	ball.y += collData.compression*collData.u.y;
+	return {dp: ball.mass*2*collData.vnf};
 }
 
 // not an actual collision, exactly...

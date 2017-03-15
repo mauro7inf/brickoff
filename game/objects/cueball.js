@@ -2,6 +2,7 @@ function CueBall(x, y, vx, vy, radius) {
 	Ball.apply(this, arguments);
 	// basics
 	this.type = "CueBall";
+	this.subtype = "normal";
 	this.locked = false;
 	
 	// definition
@@ -51,7 +52,6 @@ CueBall.prototype = (function (ballConstructor, cueBallConstructor) {
 
 CueBall.prototype.capturedBy = function (paddle) {
 	this.captured = paddle;
-	//console.log('Captured!');
 }
 
 CueBall.prototype.update = function () {
@@ -60,7 +60,7 @@ CueBall.prototype.update = function () {
 		if (!this.captured.capturing) this.captured = undefined;
 		else {
 			if (distance(this.captured.x, this.captured.y, this.x, this.y) > this.radius + this.captured.radius) {
-				this.captured = undefined
+				this.captured = undefined;
 			}
 		}
 	}
