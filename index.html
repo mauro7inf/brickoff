@@ -8,6 +8,16 @@
 		<title>Brickoff</title>
 		<link rel="icon" href="../synth/favicon.ico" type="image/x-icon" />
 		<link href="brickoff.css" rel="stylesheet" type="text/css" />
+		<script>
+// PHP/JS integration
+<?php
+$start = (int) $_GET['start']; // convert to int so it's not an arbitrary string
+if (!isset($_GET['start'])) {
+	$start = 'undefined';
+}
+?>
+var phpStartingLevel = <?php echo $start ?>;
+		</script>
 		<script src="game/globals.js"></script>
 		<script src="game/main.js"></script>
 		<script src="game/utils.js"></script>
